@@ -34,7 +34,7 @@ import {
   Navigation
 } from 'lucide-react';
 import { CATEGORIES, INITIAL_PRODUCTS, INITIAL_VENDORS, LOCALITIES, INITIAL_CATALOG_AUDIT_LOGS, INITIAL_DELIVERY_PARTNERS, DEFAULT_CAROUSEL_SETTINGS, INITIAL_HOME_BANNERS, INITIAL_FLASH_DEALS, INITIAL_FLASH_CAMPAIGN } from './data.ts';
-import { Category, CartItem, Order, Product, ProductVariant, Vendor, AdminPreviewLog, CatalogAuditLog, DeliveryPartner, sortCategoriesByOrder, HomeBanner, BannerCarouselSettings, FlashDeal, FlashDealsCampaign, parseWeightInKg, getQualifyingBulkVariants } from './types.ts';
+import { Category, CartItem, Order, OrderStatus, Product, ProductVariant, Vendor, AdminPreviewLog, CatalogAuditLog, DeliveryPartner, sortCategoriesByOrder, HomeBanner, BannerCarouselSettings, FlashDeal, FlashDealsCampaign, parseWeightInKg, getQualifyingBulkVariants } from './types.ts';
 import { VendorPortal } from './components/VendorPortal.tsx';
 import { AdminPortal } from './components/AdminPortal.tsx';
 import { CategoryListingScreen } from './components/CategoryListingScreen.tsx';
@@ -43,6 +43,7 @@ import { DeliveryLocationTrackingScreen } from './components/DeliveryLocationTra
 import { DeliveryPortal } from './components/DeliveryPortal.tsx';
 import { CustomerHomeBannerCarousel } from './components/CustomerHomeBannerCarousel.tsx';
 import { CustomerFlashDealsSection } from './components/CustomerFlashDealsSection.tsx';
+import { CustomerRegistrationModal, RegisteredCustomer } from './components/CustomerRegistrationModal.tsx';
 import { getSystemConfig, calculateDeliveryFee, SYSTEM_CONFIG_EVENT, SystemConfig } from './utils/systemConfig.ts';
 
 type AppTab = 'home' | 'categories' | 'category-listing' | 'search' | 'orders' | 'tracking' | 'account';
@@ -52,6 +53,24 @@ export default function App() {
   const [roleView, setRoleView] = useState<RoleView>('customer');
   const [activeTab, setActiveTab] = useState<AppTab>('home');
   const [isMobileFrame, setIsMobileFrame] = useState(true);
+  const [isMobileScreen, setIsMobileScreen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth < 768;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileScreen(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Show the simulated mobile frame ONLY on desktop/web (>= 768px). On actual mobile screens, adapt 100% to device viewport!
+  const showDeviceFrame = isMobileFrame && !isMobileScreen;
 
   // Data states
   const [categories, setCategories] = useState<Category[]>(CATEGORIES);
@@ -460,6 +479,20 @@ export default function App() {
   const [customerPhone, setCustomerPhone] = useState('9845012345');
   const [customerAddress, setCustomerAddress] = useState('#42, 3rd Main, Patel Nagar');
   const [paymentMethod, setPaymentMethod] = useState('UPI / PhonePe / GPay');
+
+  // Customer validation and registration state (PostgreSQL Database Backed)
+  const [currentCustomer, setCurrentCustomer] = useState<RegisteredCustomer | null>(null);
+  const [isCustomerRegisterOpen, setIsCustomerRegisterOpen] = useState(false);
+  const [isCheckingCustomer, setIsCheckingCustomer] = useState(false);
+  const [pendingCartAction, setPendingCartAction] = useState<{
+    product: Product;
+    variant: ProductVariant;
+    qtyToAdd: number;
+    deal?: FlashDeal;
+  } | null>(null);
+
+  // Order history filters state: All | Pending | Delivered | Cancelled
+  const [orderFilter, setOrderFilter] = useState<'All' | 'Pending' | 'Delivered' | 'Cancelled'>('All');
 
   // Orders state (Initialized to match Reference Panels and 14-Screen Delivery Storyboard)
   const [orders, setOrders] = useState<Order[]>([
@@ -876,17 +909,57 @@ export default function App() {
   const deliveryFee = deliveryCalc.totalDeliveryFee;
   const grandTotal = cartSubtotal + deliveryFee;
 
-  // Cart actions with Flash Deals integration (Requirements 1, 7, 8)
-  const handleAddToCart = (product: Product, variant: ProductVariant, qtyToAdd = 1, deal?: FlashDeal) => {
-    if (variant.stockQty <= 0) return;
-    if (product.approvalStatus && product.approvalStatus !== 'approved') return;
-    if (product.imageReviewStatus === 'needs_correction') return;
-    if (product.isActive === false) return;
-    if (product.vendorId) {
-      const v = vendors.find(vend => vend.id === product.vendorId);
-      if (v && v.status !== 'approved') return;
-    }
+  // Order status classification for filtering (Requirements: 'Pending', 'Delivered', 'Cancelled')
+  const isOrderPending = (status: string) => {
+    const s = (status || '').toLowerCase();
+    return !['delivered', 'cancelled'].includes(s);
+  };
+  const isOrderDelivered = (status: string) => (status || '').toLowerCase() === 'delivered';
+  const isOrderCancelled = (status: string) => (status || '').toLowerCase() === 'cancelled';
 
+  const filteredOrders = useMemo(() => {
+    if (orderFilter === 'Pending') return orders.filter(o => isOrderPending(o.status));
+    if (orderFilter === 'Delivered') return orders.filter(o => isOrderDelivered(o.status));
+    if (orderFilter === 'Cancelled') return orders.filter(o => isOrderCancelled(o.status));
+    return orders;
+  }, [orders, orderFilter]);
+
+  const pendingOrdersCount = useMemo(() => orders.filter(o => isOrderPending(o.status)).length, [orders]);
+  const deliveredOrdersCount = useMemo(() => orders.filter(o => isOrderDelivered(o.status)).length, [orders]);
+  const cancelledOrdersCount = useMemo(() => orders.filter(o => isOrderCancelled(o.status)).length, [orders]);
+
+  const handleCancelOrder = (orderId: number) => {
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'Cancelled' as OrderStatus } : o));
+    setVendorNotice({
+      text: `Order #${orderId} has been cancelled.`,
+      type: 'warning'
+    });
+    setTimeout(() => setVendorNotice(null), 3500);
+  };
+
+  const handleReorder = (order: Order) => {
+    if (!currentCustomer) {
+      setIsCustomerRegisterOpen(true);
+      return;
+    }
+    let added = 0;
+    order.items.forEach(itm => {
+      const prod = products.find(p => p.name.toLowerCase() === itm.productName.toLowerCase());
+      if (prod && prod.variants && prod.variants.length > 0) {
+        const variant = prod.variants.find(v => v.packSize === itm.packSize) || prod.variants[0];
+        proceedAddToCart(prod, variant, itm.quantity || 1);
+        added++;
+      }
+    });
+    setVendorNotice({
+      text: `Items from ${order.orderNumber} re-added to your basket!`,
+      type: 'success'
+    });
+    setTimeout(() => setVendorNotice(null), 3500);
+  };
+
+  // Internal cart addition once customer is validated
+  const proceedAddToCart = (product: Product, variant: ProductVariant, qtyToAdd = 1, deal?: FlashDeal) => {
     // Check if an active Flash Deal applies to this product and variant
     const activeDeal =
       deal ||
@@ -934,6 +1007,83 @@ export default function App() {
         }
       };
     });
+  };
+
+  // Cart actions with Mandatory PostgreSQL Customer Validation & Registration Gate
+  const handleAddToCart = async (product: Product, variant: ProductVariant, qtyToAdd = 1, deal?: FlashDeal) => {
+    if (variant.stockQty <= 0) return;
+    if (product.approvalStatus && product.approvalStatus !== 'approved') return;
+    if (product.imageReviewStatus === 'needs_correction') return;
+    if (product.isActive === false) return;
+    if (product.vendorId) {
+      const v = vendors.find(vend => vend.id === product.vendorId);
+      if (v && v.status !== 'approved') return;
+    }
+
+    // MANDATORY VALIDATION: Validate from PostgreSQL database whether customer is registered or not
+    if (!currentCustomer) {
+      const phoneToTest = customerPhone ? customerPhone.replace(/\D/g, '') : '';
+      if (phoneToTest.length >= 10) {
+        try {
+          setIsCheckingCustomer(true);
+          const res = await fetch(`/api/customers/validate?phone=${encodeURIComponent(phoneToTest)}`);
+          const data = await res.json();
+          if (data.success && data.registered && data.customer) {
+            // Customer verified from database
+            setCurrentCustomer(data.customer);
+            setCustomerName(data.customer.fullName);
+            setCustomerPhone(data.customer.phone);
+            if (data.customer.defaultAddress) setCustomerAddress(data.customer.defaultAddress);
+            proceedAddToCart(product, variant, qtyToAdd, deal);
+            return;
+          }
+        } catch (err) {
+          console.error('[Customer DB Validation Error]', err);
+        } finally {
+          setIsCheckingCustomer(false);
+        }
+      }
+
+      // Customer is NOT registered in database -> Open registration modal and hold pending item
+      setPendingCartAction({ product, variant, qtyToAdd, deal });
+      setIsCustomerRegisterOpen(true);
+      return;
+    }
+
+    // Customer already verified in database session
+    proceedAddToCart(product, variant, qtyToAdd, deal);
+  };
+
+  // Callback when customer successfully completes registration or lookup in database
+  const handleCustomerRegistered = (customer: RegisteredCustomer) => {
+    setCurrentCustomer(customer);
+    setCustomerName(customer.fullName);
+    setCustomerPhone(customer.phone);
+    if (customer.defaultAddress) setCustomerAddress(customer.defaultAddress);
+    setIsCustomerRegisterOpen(false);
+
+    // If there was an item waiting to be added, add it now
+    if (pendingCartAction) {
+      proceedAddToCart(
+        pendingCartAction.product,
+        pendingCartAction.variant,
+        pendingCartAction.qtyToAdd,
+        pendingCartAction.deal
+      );
+      setPendingCartAction(null);
+
+      setVendorNotice({
+        text: `🎉 Account verified! "${pendingCartAction.product.name}" added to your basket.`,
+        type: 'success'
+      });
+      setTimeout(() => setVendorNotice(null), 4000);
+    } else {
+      setVendorNotice({
+        text: `🎉 Welcome, ${customer.fullName}! Your Hospete Fresh account is active.`,
+        type: 'success'
+      });
+      setTimeout(() => setVendorNotice(null), 3500);
+    }
   };
 
   const handleUpdateQty = (variantId: number, newQty: number) => {
@@ -1226,26 +1376,26 @@ export default function App() {
       </header>
 
       {/* =========================================================================
-          VIEW 1: CUSTOMER MOBILE VIEW (Centered 390-430px wide preview on desktop)
+          VIEW 1: CUSTOMER MOBILE VIEW (Adapts to mobile screen on mobile, desktop preview on web)
           ========================================================================= */}
       {roleView === 'customer' && (
         <div
           className={`flex-1 w-full flex flex-col items-center min-h-screen ${
-            isMobileFrame
+            showDeviceFrame
               ? 'py-4 px-2 sm:px-4 bg-slate-900 overflow-y-auto'
               : 'p-0 bg-white'
           }`}
         >
-          {/* Centered Mobile App Shell (Matching Delivery screen visual style & height) */}
+          {/* Centered Mobile App Shell (Full screen responsive on mobile, framed on desktop) */}
           <div
             className={`w-full bg-white flex flex-col relative transition-all ${
-              isMobileFrame
+              showDeviceFrame
                 ? 'max-w-[410px] h-[780px] min-h-[740px] max-h-[820px] rounded-[32px] shadow-2xl border-[6px] border-slate-800 overflow-hidden'
-                : 'max-w-4xl min-h-screen'
+                : 'w-full max-w-4xl min-h-screen shadow-none border-0 rounded-none'
             }`}
           >
-            {/* Device Status Bar matching Delivery Screen */}
-            {isMobileFrame && (
+            {/* Device Status Bar - ONLY on Desktop Simulated Frame */}
+            {showDeviceFrame && (
               <div className="bg-slate-900 text-white px-5 pt-2 pb-1.5 flex justify-between items-center text-[11px] font-bold tracking-tight shrink-0 select-none">
                 <span>9:41</span>
                 <div className="w-16 h-4 bg-slate-800 rounded-full mx-auto" />
@@ -1820,76 +1970,190 @@ export default function App() {
               {/* TAB 4: ORDERS */}
               {activeTab === 'orders' && (
                 <div className="p-3">
-                  <h2 className="text-sm font-extrabold text-slate-900 mb-3">Your Orders & Deliveries</h2>
-                  <div className="space-y-3">
-                    {orders.map(ord => (
-                      <div key={ord.id} className="bg-white border border-slate-200 rounded-xl p-3 shadow-xs">
-                        <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                          <div>
-                            <span className="text-xs font-black text-slate-900">{ord.orderNumber}</span>
-                            <div className="text-[10px] text-slate-400">{ord.createdAt}</div>
-                          </div>
-                          <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-                            {ord.status}
-                          </span>
-                        </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h2 className="text-sm font-extrabold text-slate-900">Your Orders & Deliveries</h2>
+                    <span className="text-[11px] font-bold text-slate-500">{orders.length} total</span>
+                  </div>
 
-                        {/* PROMINENT ESTIMATED DELIVERY TIME FOR CUSTOMER */}
-                        <div className="my-2 p-2.5 bg-emerald-50/80 border border-emerald-200/90 rounded-xl flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                              <Clock className="w-3.5 h-3.5 stroke-[2.5]" />
-                            </div>
-                            <div>
-                              <div className="text-[9px] font-black uppercase tracking-wider text-emerald-800">
-                                Estimated Delivery Time
+                  {/* Filter Pills for Orders: All | Pending | Delivered | Cancelled */}
+                  <div className="flex items-center gap-1.5 pb-2.5 mb-3 overflow-x-auto no-scrollbar border-b border-slate-100">
+                    {(['All', 'Pending', 'Delivered', 'Cancelled'] as const).map(tab => {
+                      const count =
+                        tab === 'All'
+                          ? orders.length
+                          : tab === 'Pending'
+                          ? pendingOrdersCount
+                          : tab === 'Delivered'
+                          ? deliveredOrdersCount
+                          : cancelledOrdersCount;
+                      const isActive = orderFilter === tab;
+                      return (
+                        <button
+                          key={tab}
+                          onClick={() => setOrderFilter(tab)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
+                            isActive
+                              ? 'bg-emerald-700 text-white shadow-xs'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          <span>{tab}</span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                              isActive ? 'bg-emerald-800 text-emerald-100' : 'bg-slate-200 text-slate-700'
+                            }`}
+                          >
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {filteredOrders.length === 0 ? (
+                    <div className="text-center py-8 px-4 bg-slate-50 border border-slate-200/60 rounded-xl">
+                      <div className="text-3xl mb-2">📦</div>
+                      <div className="text-xs font-extrabold text-slate-800">
+                        No {orderFilter === 'All' ? '' : orderFilter.toLowerCase()} orders found
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-1">
+                        {orderFilter === 'Pending'
+                          ? 'All your grocery orders have been delivered!'
+                          : orderFilter === 'Delivered'
+                          ? 'You have no delivered orders yet.'
+                          : orderFilter === 'Cancelled'
+                          ? 'No cancelled orders.'
+                          : 'You have not placed any orders yet.'}
+                      </p>
+                      <button
+                        onClick={() => setActiveTab('home')}
+                        className="mt-3 px-3.5 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700"
+                      >
+                        Shop Fresh Groceries
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {filteredOrders.map(ord => {
+                        const isPending = isOrderPending(ord.status);
+                        const isDelivered = isOrderDelivered(ord.status);
+                        const isCancelled = isOrderCancelled(ord.status);
+
+                        return (
+                          <div key={ord.id} className="bg-white border border-slate-200 rounded-xl p-3 shadow-xs">
+                            <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                              <div>
+                                <span className="text-xs font-black text-slate-900">{ord.orderNumber}</span>
+                                <div className="text-[10px] text-slate-400">{ord.createdAt}</div>
                               </div>
-                              <div className="text-xs font-black text-slate-900">
-                                {ord.status === 'Delivered' ? (
-                                  <span className="text-emerald-700 font-bold">Delivered at {ord.deliveredAt || ord.estimatedDeliveryTime || 'Completed'}</span>
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border ${
+                                  isDelivered
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                    : isCancelled
+                                    ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                    : 'bg-amber-50 text-amber-800 border-amber-200'
+                                }`}
+                              >
+                                {isPending && <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse"></span>}
+                                {ord.status}
+                              </span>
+                            </div>
+
+                            {/* PROMINENT ESTIMATED DELIVERY TIME FOR CUSTOMER */}
+                            {!isCancelled && (
+                              <div className="my-2 p-2.5 bg-emerald-50/80 border border-emerald-200/90 rounded-xl flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                                    <Clock className="w-3.5 h-3.5 stroke-[2.5]" />
+                                  </div>
+                                  <div>
+                                    <div className="text-[9px] font-black uppercase tracking-wider text-emerald-800">
+                                      Estimated Delivery Time
+                                    </div>
+                                    <div className="text-xs font-black text-slate-900">
+                                      {ord.status === 'Delivered' ? (
+                                        <span className="text-emerald-700 font-bold">
+                                          Delivered at {ord.deliveredAt || ord.estimatedDeliveryTime || 'Completed'}
+                                        </span>
+                                      ) : (
+                                        <span>
+                                          Expected by{' '}
+                                          <strong className="text-emerald-800 font-black">
+                                            {ord.estimatedDeliveryTime || '10:35 AM'}
+                                          </strong>{' '}
+                                          (~{ord.estimatedMinutes || 15} mins)
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <span
+                                  className={`text-[10px] font-black px-2 py-0.5 rounded-md ${
+                                    ord.status === 'Delivered' ? 'bg-emerald-200 text-emerald-900' : 'bg-emerald-600 text-white'
+                                  }`}
+                                >
+                                  {ord.status === 'Delivered' ? 'Delivered' : `⚡ ${ord.estimatedMinutes || 15}m ETA`}
+                                </span>
+                              </div>
+                            )}
+
+                            <div className="py-1.5 space-y-1">
+                              {ord.items.map((itm, idx) => (
+                                <div key={idx} className="flex justify-between text-xs text-slate-600">
+                                  <span>
+                                    {itm.quantity}x {itm.productName} ({itm.packSize})
+                                  </span>
+                                  <span className="font-semibold text-slate-900">₹{itm.subtotal}</span>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="pt-2.5 border-t border-dashed border-slate-200 flex justify-between items-center text-xs">
+                              <div>
+                                <span className="text-slate-500 block text-[11px]">Delivered to {ord.locality}</span>
+                                <span className="font-black text-emerald-700 text-sm">₹{ord.totalAmount}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {isPending ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCancelOrder(ord.id)}
+                                      className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl border border-rose-200 transition-all cursor-pointer"
+                                      title="Cancel this pending order"
+                                    >
+                                      Cancel
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setTrackingOrderId(ord.id);
+                                        setActiveTab('tracking');
+                                      }}
+                                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
+                                    >
+                                      <Bike className="w-3.5 h-3.5" />
+                                      <span>Track Live 🛵</span>
+                                    </button>
+                                  </>
                                 ) : (
-                                  <span>Expected by <strong className="text-emerald-800 font-black">{ord.estimatedDeliveryTime || '10:35 AM'}</strong> (~{ord.estimatedMinutes || 15} mins)</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleReorder(ord)}
+                                    className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs rounded-xl border border-emerald-200 flex items-center gap-1.5 transition-all cursor-pointer"
+                                  >
+                                    <ShoppingBag className="w-3.5 h-3.5" />
+                                    <span>Reorder Items 🛒</span>
+                                  </button>
                                 )}
                               </div>
                             </div>
                           </div>
-                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${ord.status === 'Delivered' ? 'bg-emerald-200 text-emerald-900' : 'bg-emerald-600 text-white'}`}>
-                            {ord.status === 'Delivered' ? 'Delivered' : `⚡ ${ord.estimatedMinutes || 15}m ETA`}
-                          </span>
-                        </div>
-
-                        <div className="py-1.5 space-y-1">
-                          {ord.items.map((itm, idx) => (
-                            <div key={idx} className="flex justify-between text-xs text-slate-600">
-                              <span>
-                                {itm.quantity}x {itm.productName} ({itm.packSize})
-                              </span>
-                              <span className="font-semibold text-slate-900">₹{itm.subtotal}</span>
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className="pt-2.5 border-t border-dashed border-slate-200 flex justify-between items-center text-xs">
-                          <div>
-                            <span className="text-slate-500 block text-[11px]">Delivered to {ord.locality}</span>
-                            <span className="font-black text-emerald-700 text-sm">₹{ord.totalAmount}</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setTrackingOrderId(ord.id);
-                              setActiveTab('tracking');
-                            }}
-                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
-                          >
-                            <Bike className="w-3.5 h-3.5" />
-                            <span>Track Live 🛵</span>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1911,27 +2175,229 @@ export default function App() {
               {/* TAB 5: ACCOUNT */}
               {activeTab === 'account' && (
                 <div className="p-3 space-y-3">
-                  <div className="bg-white border border-slate-200 rounded-xl p-4 text-center">
+                  {/* Customer Profile Card - Database Validated */}
+                  <div className="bg-white border border-slate-200 rounded-xl p-4 text-center relative overflow-hidden shadow-xs">
                     <div className="w-14 h-14 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-xl mx-auto mb-2 font-black">
                       👤
                     </div>
-                    <h3 className="text-sm font-extrabold text-slate-900">Ramesh Rao</h3>
-                    <p className="text-xs text-slate-500">+91 98450 12345 • Hospete</p>
-                    <span className="inline-block mt-2 text-[10px] font-bold bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full">
-                      ★ Hospete Fresh Club Member
-                    </span>
+                    <h3 className="text-sm font-extrabold text-slate-900">
+                      {currentCustomer?.fullName || customerName || 'Guest Customer'}
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      {currentCustomer?.phone
+                        ? `+91 ${currentCustomer.phone} • ${currentCustomer.locality || selectedLocality?.name || 'Hospete'}`
+                        : customerPhone
+                        ? `+91 ${customerPhone} • Hospete`
+                        : 'Unregistered Guest Visitor'}
+                    </p>
+
+                    <div className="flex flex-wrap justify-center items-center gap-1.5 mt-2">
+                      <span className="inline-block text-[10px] font-bold bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full">
+                        ★ Hospete Fresh Club Member
+                      </span>
+                      {currentCustomer ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                          <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                          <span>DB Verified Account</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-amber-50 text-amber-800 px-2.5 py-0.5 rounded-full border border-amber-200">
+                          <span>⚠️ Guest (Register to Add to Cart)</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Account Controls */}
+                    <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-center gap-3 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomerRegisterOpen(true)}
+                        className="text-emerald-700 font-extrabold hover:underline flex items-center gap-1"
+                      >
+                        {currentCustomer ? '✏️ Edit Profile' : '📝 Register Customer Account'}
+                      </button>
+                      {currentCustomer && (
+                        <>
+                          <span className="text-slate-300">•</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCurrentCustomer(null);
+                              setCustomerPhone('');
+                              setCustomerName('Guest Customer');
+                              setVendorNotice({
+                                text: 'Switched to guest mode. Please register before adding items to cart.',
+                                type: 'warning',
+                              });
+                              setTimeout(() => setVendorNotice(null), 3500);
+                            }}
+                            className="text-slate-500 hover:text-rose-600 font-semibold"
+                          >
+                            Sign Out (Test Guest)
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
 
+                  {/* EXTENDED ORDER HISTORY SECTION WITH FILTERS (Requirement 1) */}
+                  <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-xs space-y-3">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-base">📦</span>
+                        <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                          Order History & Reorder
+                        </h4>
+                      </div>
+                      <span className="text-[10px] font-extrabold bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200">
+                        {orders.length} Total
+                      </span>
+                    </div>
+
+                    {/* Filter Tabs for Customer Account: All | Pending | Delivered | Cancelled */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                      {(['All', 'Pending', 'Delivered', 'Cancelled'] as const).map(tab => {
+                        const count =
+                          tab === 'All'
+                            ? orders.length
+                            : tab === 'Pending'
+                            ? pendingOrdersCount
+                            : tab === 'Delivered'
+                            ? deliveredOrdersCount
+                            : cancelledOrdersCount;
+                        const isActive = orderFilter === tab;
+                        return (
+                          <button
+                            key={tab}
+                            type="button"
+                            onClick={() => setOrderFilter(tab)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 cursor-pointer ${
+                              isActive
+                                ? 'bg-emerald-700 text-white shadow-xs'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            }`}
+                          >
+                            <span>{tab}</span>
+                            <span
+                              className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                                isActive ? 'bg-emerald-800 text-emerald-100' : 'bg-slate-200 text-slate-700'
+                              }`}
+                            >
+                              {count}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Filtered Orders List in Account Tab */}
+                    {filteredOrders.length === 0 ? (
+                      <div className="text-center py-6 px-3 bg-slate-50 border border-slate-200/60 rounded-xl">
+                        <div className="text-2xl mb-1.5">📦</div>
+                        <div className="text-xs font-extrabold text-slate-800">
+                          No {orderFilter === 'All' ? '' : orderFilter.toLowerCase()} orders
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-1">
+                          {orderFilter === 'Pending'
+                            ? 'All orders have been delivered! No pending deliveries.'
+                            : orderFilter === 'Delivered'
+                            ? 'You have no delivered orders yet.'
+                            : orderFilter === 'Cancelled'
+                            ? 'No orders have been cancelled.'
+                            : 'No orders placed yet.'}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5">
+                        {filteredOrders.map(ord => {
+                          const isPending = isOrderPending(ord.status);
+                          const isDelivered = isOrderDelivered(ord.status);
+                          const isCancelled = isOrderCancelled(ord.status);
+
+                          return (
+                            <div
+                              key={ord.id}
+                              className="border border-slate-200 rounded-xl p-2.5 bg-slate-50/60 hover:bg-slate-50 transition-colors"
+                            >
+                              <div className="flex justify-between items-center pb-1.5 border-b border-slate-200/60">
+                                <div>
+                                  <span className="text-xs font-black text-slate-900">{ord.orderNumber}</span>
+                                  <span className="text-[10px] text-slate-400 ml-2">{ord.createdAt}</span>
+                                </div>
+                                <span
+                                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                    isDelivered
+                                      ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                                      : isCancelled
+                                      ? 'bg-rose-100 text-rose-800 border-rose-200'
+                                      : 'bg-amber-100 text-amber-900 border-amber-200'
+                                  }`}
+                                >
+                                  {ord.status}
+                                </span>
+                              </div>
+
+                              <div className="py-1.5 text-xs text-slate-600 space-y-0.5">
+                                {ord.items.map((itm, idx) => (
+                                  <div key={idx} className="flex justify-between text-[11px]">
+                                    <span>
+                                      {itm.quantity}x {itm.productName} ({itm.packSize})
+                                    </span>
+                                    <span className="font-semibold text-slate-800">₹{itm.subtotal}</span>
+                                  </div>
+                                ))}
+                              </div>
+
+                              <div className="pt-2 border-t border-dashed border-slate-200 flex justify-between items-center text-xs">
+                                <div>
+                                  <span className="text-[10px] text-slate-500 block">{ord.locality}</span>
+                                  <span className="font-black text-emerald-700 text-xs">₹{ord.totalAmount}</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  {isPending ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleCancelOrder(ord.id)}
+                                        className="px-2 py-1 bg-white hover:bg-rose-50 text-rose-700 text-[11px] font-bold rounded-lg border border-slate-200 hover:border-rose-300"
+                                      >
+                                        Cancel
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setTrackingOrderId(ord.id);
+                                          setActiveTab('tracking');
+                                        }}
+                                        className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-extrabold rounded-lg flex items-center gap-1 shadow-xs"
+                                      >
+                                        <Bike className="w-3 h-3" />
+                                        <span>Track 🛵</span>
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleReorder(ord)}
+                                      className="px-2.5 py-1 bg-white hover:bg-emerald-50 text-emerald-800 text-[11px] font-extrabold rounded-lg border border-slate-200 hover:border-emerald-300 flex items-center gap-1"
+                                    >
+                                      <ShoppingBag className="w-3 h-3" />
+                                      <span>Reorder 🛒</span>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Customer Quick Links */}
                   <div className="bg-white border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100 text-xs">
-                    <button
-                      onClick={() => setActiveTab('orders')}
-                      className="w-full p-3 flex justify-between items-center hover:bg-slate-50 text-left font-semibold text-slate-800"
-                    >
-                      <span>📦 Order History & Reorder</span>
-                      <ChevronRight className="w-4 h-4 text-slate-400" />
-                    </button>
                     <div className="p-3 flex justify-between items-center text-slate-800 font-semibold">
-                      <span>📍 Default Address: Patel Nagar, Hospete</span>
+                      <span>📍 Default Address: {currentCustomer?.defaultAddress || customerAddress}</span>
                       <span className="text-emerald-600 text-[11px]">Active</span>
                     </div>
                     <div className="p-3 flex justify-between items-center text-slate-800 font-semibold">
@@ -1975,7 +2441,13 @@ export default function App() {
 
             {/* 10. FLOATING BASKET SUMMARY (Above bottom nav bar) */}
             {cartItemCount > 0 && !isCheckoutOpen && (
-              <div className="absolute bottom-16 left-3 right-3 bg-emerald-700 text-white rounded-xl px-3.5 py-2.5 shadow-lg flex items-center justify-between z-30 animate-in fade-in slide-in-from-bottom-2">
+              <div
+                className={`${
+                  showDeviceFrame ? 'absolute' : 'fixed md:absolute'
+                } bottom-16 left-3 right-3 bg-emerald-700 text-white rounded-xl px-3.5 py-2.5 shadow-lg flex items-center justify-between z-30 animate-in fade-in slide-in-from-bottom-2 ${
+                  !showDeviceFrame ? 'max-w-md mx-auto' : ''
+                }`}
+              >
                 <div>
                   <div className="text-xs font-black">
                     {cartItemCount} {cartItemCount === 1 ? 'item' : 'items'} • ₹{cartSubtotal}
@@ -1999,7 +2471,13 @@ export default function App() {
             )}
 
             {/* 9. FIXED BOTTOM NAVIGATION (5 items: Home, Categories, Search, Orders, Account) */}
-            <nav className="absolute bottom-0 left-0 right-0 h-14 bg-white border-t border-slate-200 grid grid-cols-5 items-center z-40">
+            <nav
+              className={`${
+                showDeviceFrame ? 'absolute' : 'fixed md:absolute'
+              } bottom-0 left-0 right-0 h-14 bg-white border-t border-slate-200 grid grid-cols-5 items-center z-40 ${
+                !showDeviceFrame ? 'w-full max-w-4xl mx-auto' : ''
+              }`}
+            >
               {[
                 { tab: 'home', label: 'Home', icon: '🏠' },
                 { tab: 'categories', label: 'Categories', icon: '📁' },
@@ -2046,8 +2524,8 @@ export default function App() {
           - Benefits row (100% Fresh, 20-min delivery, easy returns, secure UPI/COD)
           ========================================================================= */}
       {selectedProduct && selectedVariant && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-xs">
-          <div className="bg-white w-full max-w-[420px] max-h-[92vh] rounded-3xl overflow-y-auto flex flex-col shadow-2xl relative">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-2.5 sm:p-4 backdrop-blur-xs">
+          <div className="bg-white w-full max-w-full sm:max-w-[420px] max-h-[92dvh] sm:max-h-[92vh] rounded-2xl sm:rounded-3xl overflow-y-auto flex flex-col shadow-2xl relative my-auto">
             {/* Top Bar */}
             <div className="p-3 flex items-center justify-between border-b border-slate-100 sticky top-0 bg-white z-10">
               <button
@@ -2270,8 +2748,8 @@ export default function App() {
           CHECKOUT & BASKET MODAL
           ========================================================================= */}
       {isCheckoutOpen && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-xs">
-          <div className="bg-white w-full max-w-[420px] max-h-[92vh] rounded-3xl overflow-y-auto flex flex-col shadow-2xl">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-2.5 sm:p-4 backdrop-blur-xs">
+          <div className="bg-white w-full max-w-full sm:max-w-[420px] max-h-[92dvh] sm:max-h-[92vh] rounded-2xl sm:rounded-3xl overflow-y-auto flex flex-col shadow-2xl my-auto">
             <div className="p-3.5 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
               <div className="flex items-center gap-2">
                 <button
@@ -2467,6 +2945,19 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Customer Database Registration & Verification Modal (Validates against PostgreSQL DB) */}
+      <CustomerRegistrationModal
+        isOpen={isCustomerRegisterOpen}
+        onClose={() => {
+          setIsCustomerRegisterOpen(false);
+          setPendingCartAction(null);
+        }}
+        pendingItem={pendingCartAction}
+        onRegistered={handleCustomerRegistered}
+        localities={LOCALITIES}
+        initialPhone={customerPhone}
+      />
 
       {/* =========================================================================
           VIEW 2: ADMIN MANAGEMENT PORTAL (Full wide desktop layout)

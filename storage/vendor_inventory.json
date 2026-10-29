@@ -11,12 +11,12 @@
     "categorySlug": "veggies",
     "price": 24,
     "mrp": 30,
-    "physicalStock": 30,
+    "physicalStock": 27,
     "reservedStock": 0,
     "committedStock": 0,
-    "availableStock": 30,
+    "availableStock": 27,
     "locality": "College Road",
-    "updatedAt": "2026-10-28T11:50:37.922Z"
+    "updatedAt": "2026-10-29T16:55:19.146Z"
   },
   {
     "id": "inv-v1-p1-vr102",

@@ -17,17 +17,28 @@ import {
   createAdminException,
   getVendorSettlements,
   getOrders,
+  createOrderInDb,
+  findCustomerByPhone,
+  findCustomerById,
+  createCustomer,
+  updateCustomer,
+  getAllCustomers,
 } from './src/db/repository.ts';
 import { NotificationService } from './src/services/notificationService.ts';
+import { isMssqlAvailable, getMssqlStatus, mssqlConfig } from './src/db/sqlserver.ts';
+import { runMssqlMigration } from './src/db/migrateMssql.ts';
 import { sql } from 'drizzle-orm';
 
 async function startServer() {
   const app = express();
   const PORT = process.env.PORT || 3000;
 
-  // Run initial migration lazily/asynchronously on boot
+  // Run initial migrations lazily/asynchronously on boot
   runInitialMigration().catch(err => {
     console.error('[Database Migration Warning] Error running initial migration:', err);
+  });
+  runMssqlMigration().catch(err => {
+    console.warn('[MSSQL Migration Boot Notice]', err?.message || err);
   });
 
   // JSON and URL-encoded body parsers with 10mb limit for documents
@@ -1761,7 +1772,7 @@ async function startServer() {
   });
 
   // 6. POST /api/orders/checkout (Authoritative atomic checkout & allocation)
-  app.post('/api/orders/checkout', (req, res) => {
+  app.post('/api/orders/checkout', async (req, res) => {
     try {
       const {
         customerName,
@@ -1791,6 +1802,13 @@ async function startServer() {
         commissionRate: commissionRate ? Number(commissionRate) : 10.0
       });
 
+      // Persist order asynchronously to authoritative database (SQL Server & PostgreSQL)
+      try {
+        await createOrderInDb(result.parentOrder, result.suborders);
+      } catch (dbErr) {
+        console.warn('[Database Order Write Warning] Order stored in engine, async DB write noted:', dbErr);
+      }
+
       return res.json({
         success: true,
         order: result.parentOrder,
@@ -1803,13 +1821,19 @@ async function startServer() {
     }
   });
 
-  // 7. GET /api/orders (Authoritative order list)
-  app.get('/api/orders', (req, res) => {
+  // 7. GET /api/orders (Authoritative order list from database)
+  app.get('/api/orders', async (req, res) => {
     try {
+      const dbOrders = await getOrders();
+      if (dbOrders && dbOrders.length > 0) {
+        return res.json({ success: true, orders: dbOrders });
+      }
       const orders = multiVendorStore.getOrders();
       return res.json({ success: true, orders });
-    } catch {
-      return res.status(500).json({ error: 'Failed to retrieve orders.' });
+    } catch (err) {
+      console.warn('[Orders Retrieval Warning] Falling back to multiVendorStore orders:', err);
+      const orders = multiVendorStore.getOrders();
+      return res.json({ success: true, orders });
     }
   });
 
@@ -1903,25 +1927,68 @@ async function startServer() {
   // CLOUD SQL POSTGRESQL AUTHORITATIVE ENDPOINTS
   // =========================================================================
 
-  // 1. Health check endpoint (verifies application and PostgreSQL connectivity without secrets)
+  // 1. Health check endpoint (verifies application, SQL Server, and PostgreSQL connectivity)
   app.get('/api/health', async (_req, res) => {
+    let pgStatus = 'disconnected';
+    let pgError: string | null = null;
     try {
       await db.execute(sql`SELECT 1 as healthy;`);
-      return res.json({
-        status: 'healthy',
-        database: 'connected',
-        engine: 'Google Cloud SQL for PostgreSQL (Developer Edition)',
-        region: 'asia-southeast1',
-        timestamp: new Date().toISOString()
-      });
+      pgStatus = 'connected';
     } catch (err: any) {
-      console.error('[Health Check Error] Database connection failure:', err);
-      return res.status(503).json({
-        status: 'degraded',
-        database: 'disconnected',
-        error: 'Database connection failed. Please try again later.'
-      });
+      pgError = err?.message || 'PostgreSQL connection failed';
     }
+
+    const mssqlInfo = getMssqlStatus();
+    const mssqlAlive = await isMssqlAvailable();
+
+    const isHealthy = pgStatus === 'connected' || mssqlAlive;
+
+    return res.status(isHealthy ? 200 : 503).json({
+      status: isHealthy ? 'healthy' : 'degraded',
+      activeProvider: mssqlAlive ? 'Microsoft SQL Server (DESKTOP-JN61NSF\\SQLEXPRESS)' : 'Cloud SQL PostgreSQL',
+      databases: {
+        sqlServer: {
+          instance: mssqlInfo.server,
+          database: mssqlInfo.database,
+          connected: mssqlAlive,
+          lastError: mssqlInfo.lastError,
+          configured: true,
+          role: 'Authoritative Enterprise Database',
+          migrationStatus: 'Idempotent schema ready (/migrations/mssql/001_initial_schema.sql)',
+        },
+        cloudSqlPostgres: {
+          engine: 'Google Cloud SQL for PostgreSQL (Developer Edition)',
+          region: 'asia-southeast1',
+          connected: pgStatus === 'connected',
+          lastError: pgError,
+          role: 'Compatible Production Cloud Provider',
+        },
+      },
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  // 1b. SQL Server manual migration trigger
+  app.post('/api/database/migrate-sqlserver', async (_req, res) => {
+    try {
+      const result = await runMssqlMigration();
+      return res.json(result);
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err?.message || 'Migration execution failed.' });
+    }
+  });
+
+  // 1c. SQL Server status endpoint
+  app.get('/api/database/sqlserver-status', async (_req, res) => {
+    const isAlive = await isMssqlAvailable();
+    const status = getMssqlStatus();
+    return res.json({
+      ...status,
+      connected: isAlive,
+      engine: 'Microsoft SQL Server',
+      database: mssqlConfig.database,
+      instance: mssqlConfig.server,
+    });
   });
 
   // 2. GET /api/categories (PostgreSQL database single source of truth)
@@ -2048,6 +2115,141 @@ async function startServer() {
       return res.json({ success: true, invoice });
     } catch (err: any) {
       return res.status(404).json({ success: false, error: err.message });
+    }
+  });
+
+  // 12. Customer Validation & Registration (PostgreSQL Database Backed)
+  // GET /api/customers/validate: Checks if customer is registered in DB by phone or ID
+  app.get('/api/customers/validate', async (req, res) => {
+    try {
+      const { phone, id } = req.query;
+      if (!phone && !id) {
+        return res.status(400).json({ success: false, error: 'Phone or ID is required for validation.' });
+      }
+
+      let customer = null;
+      if (id) {
+        customer = await findCustomerById(String(id));
+      } else if (phone) {
+        customer = await findCustomerByPhone(String(phone));
+      }
+
+      if (customer) {
+        return res.json({
+          success: true,
+          registered: true,
+          customer: {
+            id: customer.id,
+            fullName: customer.fullName,
+            phone: customer.phone,
+            defaultAddress: customer.defaultAddress,
+            locality: customer.locality,
+            createdAt: customer.createdAt,
+          },
+        });
+      }
+
+      return res.json({
+        success: true,
+        registered: false,
+        message: 'Customer is not registered in the database.',
+      });
+    } catch (err: any) {
+      console.error('[Customer Validation Error]', err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // POST /api/customers/register: Registers a new customer or updates existing record
+  app.post('/api/customers/register', async (req, res) => {
+    try {
+      const { fullName, phone, defaultAddress, locality } = req.body;
+
+      if (!fullName || !fullName.trim()) {
+        return res.status(400).json({ success: false, error: 'Full name is required.' });
+      }
+
+      const cleanPhone = String(phone || '').replace(/\D/g, '').slice(-10);
+      if (!cleanPhone || cleanPhone.length < 10) {
+        return res.status(400).json({ success: false, error: 'A valid 10-digit mobile number is required.' });
+      }
+
+      // Check if already registered
+      const existing = await findCustomerByPhone(cleanPhone);
+      if (existing) {
+        // Update details if provided
+        const updated = await updateCustomer(existing.id, {
+          fullName: fullName.trim(),
+          phone: cleanPhone,
+          defaultAddress: defaultAddress || existing.defaultAddress || undefined,
+          locality: locality || existing.locality || undefined,
+        });
+
+        return res.json({
+          success: true,
+          registered: true,
+          isExisting: true,
+          message: 'Customer record verified and updated.',
+          customer: {
+            id: updated?.id || existing.id,
+            fullName: updated?.fullName || existing.fullName,
+            phone: updated?.phone || existing.phone,
+            defaultAddress: updated?.defaultAddress || existing.defaultAddress,
+            locality: updated?.locality || existing.locality,
+          },
+        });
+      }
+
+      // Create new customer record in PostgreSQL database
+      const newCustomer = await createCustomer({
+        fullName: fullName.trim(),
+        phone: cleanPhone,
+        defaultAddress: defaultAddress?.trim() || '#12, Hospete Main Road',
+        locality: locality?.trim() || 'Patel Nagar',
+      });
+
+      return res.status(201).json({
+        success: true,
+        registered: true,
+        isExisting: false,
+        message: 'Customer successfully registered in Hospete Fresh database.',
+        customer: {
+          id: newCustomer.id,
+          fullName: newCustomer.fullName,
+          phone: newCustomer.phone,
+          defaultAddress: newCustomer.defaultAddress,
+          locality: newCustomer.locality,
+          createdAt: newCustomer.createdAt,
+        },
+      });
+    } catch (err: any) {
+      console.error('[Customer Registration Error]', err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // GET /api/customers: Returns all registered customers from database
+  app.get('/api/customers', async (_req, res) => {
+    try {
+      const customerList = await getAllCustomers();
+      return res.json({ success: true, customers: customerList });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  // PUT /api/customers/:id: Updates customer profile
+  app.put('/api/customers/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { fullName, phone, defaultAddress, locality } = req.body;
+      const updated = await updateCustomer(id, { fullName, phone, defaultAddress, locality });
+      if (!updated) {
+        return res.status(404).json({ success: false, error: 'Customer not found.' });
+      }
+      return res.json({ success: true, customer: updated });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err.message });
     }
   });
 
