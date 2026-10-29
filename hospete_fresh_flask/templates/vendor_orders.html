@@ -1,0 +1,395 @@
+{% extends "base.html" %}
+
+{% block portal_content %}
+<!-- Vendor Sub Navigation -->
+<div class="vendor-nav-subbar">
+  <div style="display: flex; align-items: center; gap: 8px;">
+    <span style="font-size: 16px;">🏪</span>
+    <span style="font-weight: 800; font-size: 14px; color: #0f172a;">{{ vendor['business_name'] }}</span>
+  </div>
+  <div class="vendor-nav-links">
+    <a href="/vendor/dashboard" class="v-link">Dashboard</a>
+    <a href="/vendor/products" class="v-link">My Products</a>
+    <a href="/vendor/products/new" class="v-link">+ Add Product</a>
+    <a href="/vendor/inventory" class="v-link">Inventory / Stock</a>
+    <a href="/vendor/orders" class="v-link active">Orders &amp; Dispatch</a>
+    <a href="/vendor/profile" class="v-link">Store Profile</a>
+    <a href="/vendor/logout" class="v-link" style="color: #ef4444;">Logout</a>
+  </div>
+</div>
+
+<!-- Header Card -->
+<div class="vendor-header-card" style="margin-top: 16px;">
+  <div class="vendor-header-text">
+    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+      <h1 class="vendor-title" style="margin: 0;">Vendor Order Actions &amp; Packing Handoff</h1>
+      <span style="background: #eff6ff; color: #1d4ed8; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; border: 1px solid #bfdbfe;">
+        Role: Supplier / Store Partner
+      </span>
+    </div>
+    <p class="vendor-subtitle" style="margin-top: 4px;">
+      Accept new orders, complete the physical packing verification checklist, and hand off to Hospete Fresh delivery partners.
+    </p>
+  </div>
+  <div style="display: flex; gap: 10px; align-items: center;">
+    <div style="font-size: 12px; font-weight: 800; color: #0f172a; background: #f8fafc; border: 1px solid #e2e8f0; padding: 6px 12px; border-radius: 8px;">
+      Orders: {{ orders|length }}
+    </div>
+  </div>
+</div>
+
+<!-- Strict Privacy Banner (Prompt Requirement 1 & 2) -->
+<div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 12px 16px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 12px;">
+  <span style="font-size: 18px; line-height: 1;">🔒</span>
+  <div style="font-size: 12px; color: #166534; line-height: 1.5;">
+    <strong>Customer Data Protection &amp; Privacy Active:</strong>
+    Customer phone numbers, customer personal names, and exact street addresses are withheld from vendor view. Only delivery locality/area (e.g. Patel Nagar, Dam Road) and item fulfillment details are shared.
+  </div>
+</div>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div style="margin-bottom: 20px;">
+      {% for category, message in messages %}
+        <div class="vendor-flash-box flash-{{ category }}" style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; margin-bottom: 8px; {% if category == 'error' %}background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;{% elif category == 'warning' %}background: #fffbeb; border: 1px solid #fef3c7; color: #92400e;{% else %}background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46;{% endif %}">
+          <span>{% if category == 'warning' %}⚠️{% elif category == 'error' %}❌{% else %}✅{% endif %}</span>
+          <span>{{ message }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<!-- Filter Tabs (Panel 1) -->
+<div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 16px;">
+  {% set filters = [
+    ('all', 'All Orders', status_counts['all']),
+    ('New', 'New', status_counts['New']),
+    ('Accepted', 'Accepted', status_counts['Accepted']),
+    ('Preparing', 'Preparing', status_counts['Preparing']),
+    ('Ready for Pickup', 'Ready for Pickup', status_counts['Ready for Pickup']),
+    ('Picked Up', 'Picked Up', status_counts['Picked Up']),
+    ('Delivered', 'Delivered', status_counts['Delivered'])
+  ] %}
+  {% for f_key, f_label, f_count in filters %}
+  <a href="/vendor/orders?status={{ f_key }}" style="text-decoration: none; font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 20px; white-space: nowrap; transition: all 0.15s; {% if current_filter == f_key or (current_filter == '' and f_key == 'all') %}background: #16a34a; color: #fff; box-shadow: 0 1px 3px rgba(22, 163, 74, 0.3);{% else %}background: #fff; color: #475569; border: 1px solid #cbd5e1;{% endif %}">
+    {{ f_label }} ({{ f_count }})
+  </a>
+  {% endfor %}
+</div>
+
+<!-- Main 2-Column Interface: Left Orders List, Right Selected Order Action Details -->
+<div style="display: grid; grid-template-columns: 1fr 1.15fr; gap: 20px; align-items: start;">
+
+  <!-- LEFT COLUMN: Orders Table (Panel 1) -->
+  <div class="vendor-panel-card" style="padding: 0; overflow: hidden;">
+    <div style="padding: 14px 18px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: space-between; align-items: center;">
+      <h2 style="font-size: 14px; font-weight: 800; color: #0f172a; margin: 0;">Vendor Order Queue</h2>
+      <span style="font-size: 11px; color: #64748b; font-weight: 600;">{{ orders|length }} orders matching filter</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="vendor-inventory-table" style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background: #f8fafc; font-size: 11px; text-transform: uppercase; color: #64748b; text-align: left; border-bottom: 1px solid #e2e8f0;">
+            <th style="padding: 10px 14px;">Order ID &amp; Time</th>
+            <th style="padding: 10px 14px;">Delivery Area</th>
+            <th style="padding: 10px 14px;">Items Summary</th>
+            <th style="padding: 10px 14px;">Amount</th>
+            <th style="padding: 10px 14px;">Status</th>
+            <th style="padding: 10px 14px; text-align: right;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if orders %}
+            {% for itm in orders %}
+            {% set ord = itm['order'] %}
+            {% set is_selected = selected_order and selected_order['order']['id'] == ord['id'] %}
+            <tr style="border-bottom: 1px solid #f1f5f9; font-size: 12px; cursor: pointer; {% if is_selected %}background: #f0fdf4;{% else %}background: #fff;{% endif %}" onclick="window.location.href='/vendor/orders?status={{ current_filter }}&view_order_id={{ ord['id'] }}'">
+              <!-- Order ID & Time -->
+              <td style="padding: 12px 14px; font-weight: 800; color: #0f172a;">
+                <div style="font-family: monospace; color: #0f172a; font-size: 12px;">{{ ord['order_number'] }}</div>
+                <div style="font-size: 10px; color: #94a3b8; font-weight: normal; margin-top: 2px;">{{ ord['created_at'] }}</div>
+              </td>
+
+              <!-- Delivery Area Only (No full address or phone!) -->
+              <td style="padding: 12px 14px;">
+                <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: #334155; background: #f1f5f9; padding: 2px 8px; border-radius: 6px;">
+                  📍 {{ ord['locality'] }}
+                </span>
+              </td>
+
+              <!-- Items Summary -->
+              <td style="padding: 12px 14px;">
+                <div style="font-weight: 700; color: #1e293b; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  {{ itm['items'][0]['product_name'] if itm['items'] else 'Grocery item' }}
+                </div>
+                <div style="font-size: 10px; color: #64748b;">
+                  {{ itm['items']|length }} item(s) &bull; {{ itm['packed_count'] }}/{{ itm['items']|length }} packed
+                </div>
+              </td>
+
+              <!-- Amount -->
+              <td style="padding: 12px 14px; font-weight: 800; color: #16a34a;">
+                ₹{{ '%.0f'|format(itm['vendor_subtotal']) }}
+              </td>
+
+              <!-- Status Badge -->
+              <td style="padding: 12px 14px;">
+                {% if ord['status'] == 'New' %}
+                  <span style="font-size: 10px; font-weight: 800; background: #fefce8; color: #ca8a04; border: 1px solid #fef08a; padding: 2px 8px; border-radius: 9999px;">
+                    ● New
+                  </span>
+                {% elif ord['status'] == 'Accepted' %}
+                  <span style="font-size: 10px; font-weight: 800; background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 9999px;">
+                    ● Accepted
+                  </span>
+                {% elif ord['status'] == 'Preparing' %}
+                  <span style="font-size: 10px; font-weight: 800; background: #fdf4ff; color: #c026d3; border: 1px solid #f5d0fe; padding: 2px 8px; border-radius: 9999px;">
+                    ● Preparing
+                  </span>
+                {% elif ord['status'] == 'Ready for Pickup' %}
+                  <span style="font-size: 10px; font-weight: 800; background: #ecfdf5; color: #16a34a; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 9999px;">
+                    ● Ready for Pickup
+                  </span>
+                {% elif ord['status'] == 'Picked Up' %}
+                  <span style="font-size: 10px; font-weight: 800; background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 9999px;">
+                    ● Picked Up
+                  </span>
+                {% elif ord['status'] == 'Delivered' %}
+                  <span style="font-size: 10px; font-weight: 800; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 2px 8px; border-radius: 9999px;">
+                    ✓ Delivered
+                  </span>
+                {% elif ord['status'] == 'Rejected' %}
+                  <span style="font-size: 10px; font-weight: 800; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; padding: 2px 8px; border-radius: 9999px;">
+                    ✕ Rejected
+                  </span>
+                {% else %}
+                  <span style="font-size: 10px; font-weight: 800; background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; padding: 2px 8px; border-radius: 9999px;">
+                    {{ ord['status'] }}
+                  </span>
+                {% endif %}
+              </td>
+
+              <!-- Action Button -->
+              <td style="padding: 12px 14px; text-align: right;">
+                <a href="/vendor/orders?status={{ current_filter }}&view_order_id={{ ord['id'] }}" style="text-decoration: none; font-size: 11px; font-weight: 800; color: #16a34a; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 4px 10px; border-radius: 6px; display: inline-block;">
+                  View &rarr;
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 40px; color: #64748b;">
+                <div style="font-size: 32px; margin-bottom: 8px;">📦</div>
+                <div style="font-size: 14px; font-weight: 700; color: #0f172a;">No orders in this status</div>
+                <p style="font-size: 12px; color: #64748b; margin-top: 4px;">Orders placed by Hospete customers will appear here.</p>
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- RIGHT COLUMN: Order Details, Packing Checklist & State Progression (Panels 2, 3, 4) -->
+  <div>
+    {% if selected_order %}
+      {% set cur_ord = selected_order['order'] %}
+      {% set cur_items = selected_order['items'] %}
+      
+      <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+        <!-- Top bar of order detail -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 14px; border-bottom: 1px solid #f1f5f9; margin-bottom: 16px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h3 style="font-size: 18px; font-weight: 900; color: #0f172a; margin: 0;">{{ cur_ord['order_number'] }}</h3>
+              <span style="font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 6px; {% if cur_ord['status'] == 'New' %}background: #fefce8; color: #ca8a04; border: 1px solid #fef08a;{% elif cur_ord['status'] == 'Preparing' %}background: #fdf4ff; color: #c026d3; border: 1px solid #f5d0fe;{% elif cur_ord['status'] == 'Ready for Pickup' %}background: #ecfdf5; color: #16a34a; border: 1px solid #bbf7d0;{% else %}background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;{% endif %}">
+                {{ cur_ord['status'] }}
+              </span>
+            </div>
+            <div style="font-size: 11px; color: #64748b; margin-top: 4px;">
+              Ordered on {{ cur_ord['created_at'] }} &bull; Payment: {{ cur_ord['payment_method'] }}
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 11px; color: #64748b;">Vendor Fulfillment Total</div>
+            <div style="font-size: 20px; font-weight: 900; color: #16a34a;">₹{{ '%.0f'|format(selected_order['vendor_subtotal']) }}</div>
+          </div>
+        </div>
+
+        <!-- Privacy Enforced Area Label -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #334155;">
+            <span>📍 Delivery Locality:</span>
+            <span style="color: #0f172a; font-weight: 800;">{{ cur_ord['locality'] }}</span>
+          </div>
+          <div style="font-size: 10px; font-weight: 700; color: #16a34a; background: #ecfdf5; border: 1px solid #bbf7d0; padding: 2px 6px; border-radius: 4px;">
+            🔒 Customer Info Protected
+          </div>
+        </div>
+
+        <!-- STAGE 1: NEW ORDER ACTIONS (Panel 2: Clear Accept and Reject Order buttons) -->
+        {% if cur_ord['status'] == 'New' %}
+          <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+              <span style="font-size: 18px;">⚡</span>
+              <strong style="color: #92400e; font-size: 13px;">New Order Received - Action Required</strong>
+            </div>
+            <p style="font-size: 12px; color: #b45309; margin: 0 0 14px 0;">
+              Please review available inventory for this order. Accept to confirm fulfillment or reject with a reason.
+            </p>
+            <div style="display: flex; gap: 10px;">
+              <!-- Accept Order Button (Prompt Requirement: Do not hide Accept Order) -->
+              <form action="/vendor/orders/{{ cur_ord['id'] }}/accept" method="POST" style="flex: 1;">
+                <button type="submit" style="width: 100%; height: 42px; background: #16a34a; hover:background: #15803d; color: #fff; font-size: 13px; font-weight: 800; border: none; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 4px rgba(22, 163, 74, 0.2);">
+                  <span>✓ Accept Order</span>
+                </button>
+              </form>
+
+              <!-- Reject Order Button -->
+              <button type="button" onclick="document.getElementById('reject-modal-{{ cur_ord['id'] }}').style.display = 'flex'" style="height: 42px; background: #fff; border: 1px solid #fca5a5; color: #dc2626; font-size: 13px; font-weight: 800; padding: 0 16px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <span>✕ Reject Order</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Reject Modal -->
+          <div id="reject-modal-{{ cur_ord['id'] }}" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
+            <div style="background: #fff; border-radius: 16px; max-width: 440px; width: 100%; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+              <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0 0 8px 0;">Reject Order #{{ cur_ord['order_number'] }}</h3>
+              <p style="font-size: 12px; color: #64748b; margin: 0 0 16px 0;">Please provide a specific reason for rejection. This will be recorded on the order.</p>
+              <form action="/vendor/orders/{{ cur_ord['id'] }}/reject" method="POST">
+                <textarea name="reason" rows="3" required style="width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; font-size: 12px; margin-bottom: 16px;" placeholder="e.g. Items out of stock, shop closing early..."></textarea>
+                <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                  <button type="button" onclick="document.getElementById('reject-modal-{{ cur_ord['id'] }}').style.display = 'none'" style="padding: 8px 16px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 12px; font-weight: 700; color: #475569; cursor: pointer;">Cancel</button>
+                  <button type="submit" style="padding: 8px 16px; background: #dc2626; border: none; border-radius: 8px; font-size: 12px; font-weight: 800; color: #fff; cursor: pointer;">Confirm Rejection</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        {% endif %}
+
+        <!-- STAGE 2: ACCEPTED -> START PREPARING -->
+        {% if cur_ord['status'] == 'Accepted' %}
+          <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div>
+              <div style="font-weight: 800; color: #1e40af; font-size: 13px;">Order Accepted ✓</div>
+              <div style="font-size: 11px; color: #3b82f6; margin-top: 2px;">Move order to 'Preparing' to access the physical packing verification checklist.</div>
+            </div>
+            <form action="/vendor/orders/{{ cur_ord['id'] }}/prepare" method="POST">
+              <button type="submit" style="height: 38px; padding: 0 18px; background: #2563eb; color: #fff; font-size: 12px; font-weight: 800; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                <span>Start Preparing &rarr;</span>
+              </button>
+            </form>
+          </div>
+        {% endif %}
+
+        <!-- STAGE 3: PACKING CHECKLIST (Panel 3: Enforced verification before Ready for Pickup) -->
+        <div style="margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div>
+              <h4 style="font-size: 13px; font-weight: 800; color: #0f172a; margin: 0;">Packing Verification Checklist</h4>
+              <p style="font-size: 11px; color: #64748b; margin: 2px 0 0 0;">Check off each item physically packed in the delivery bag.</p>
+            </div>
+            <span style="font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; {% if selected_order['all_packed'] %}background: #ecfdf5; color: #16a34a; border: 1px solid #bbf7d0;{% else %}background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0;{% endif %}">
+              {{ selected_order['packed_count'] }}/{{ cur_items|length }} Checked
+            </span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            {% for it in cur_items %}
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-radius: 10px; border: 1px solid {% if it['packed'] %}#a7f3d0; background: #f0fdf4;{% else %}#e2e8f0; background: #fff;{% endif %}; transition: all 0.15s;">
+              <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                <!-- Packing Checkbox -->
+                {% if cur_ord['status'] in ('Preparing', 'Accepted') %}
+                  <form action="/vendor/orders/{{ cur_ord['id'] }}/toggle-packed/{{ it['id'] }}" method="POST" style="margin: 0;">
+                    <input type="checkbox" onchange="this.form.submit()" {% if it['packed'] %}checked{% endif %} style="width: 18px; height: 18px; accent-color: #16a34a; cursor: pointer;">
+                  </form>
+                {% else %}
+                  <span style="font-size: 14px; color: {% if it['packed'] %}#16a34a{% else %}#94a3b8{% endif %};">
+                    {% if it['packed'] %}✓{% else %}○{% endif %}
+                  </span>
+                {% endif %}
+
+                <div>
+                  <div style="font-weight: 800; font-size: 13px; color: #0f172a;">{{ it['product_name'] }}</div>
+                  <div style="font-size: 11px; color: #64748b;">
+                    Pack: <strong style="color: #334155;">{{ it['pack_size'] }}</strong> &bull; Qty: <strong style="color: #0f172a;">{{ it['quantity'] }}x</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div style="text-align: right; white-space: nowrap;">
+                <div style="font-weight: 800; font-size: 13px; color: #16a34a;">₹{{ '%.0f'|format(it['subtotal']) }}</div>
+                {% if it['packed'] %}
+                  <span style="font-size: 9px; font-weight: 800; color: #16a34a; background: #dcfce7; padding: 1px 4px; border-radius: 3px;">PACKED</span>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- STAGE 3 ACTION: MARK AS READY FOR PICKUP -->
+        {% if cur_ord['status'] == 'Preparing' %}
+          <div style="border-top: 1px dashed #cbd5e1; padding-top: 16px;">
+            {% if selected_order['all_packed'] %}
+              <form action="/vendor/orders/{{ cur_ord['id'] }}/ready-for-pickup" method="POST">
+                <button type="submit" style="width: 100%; height: 44px; background: #16a34a; hover:background: #15803d; color: #fff; font-size: 13px; font-weight: 800; border: none; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25);">
+                  <span>✓ Mark as Ready for Pickup</span>
+                </button>
+              </form>
+              <p style="font-size: 11px; color: #166534; text-align: center; margin: 6px 0 0 0;">
+                All items physically packed. Click above to signal Admin dispatch.
+              </p>
+            {% else %}
+              <button type="button" disabled style="width: 100%; height: 44px; background: #e2e8f0; color: #94a3b8; font-size: 13px; font-weight: 700; border: none; border-radius: 10px; cursor: not-allowed; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <span>🔒 Complete Checklist to Mark Ready</span>
+              </button>
+              <p style="font-size: 11px; color: #ef4444; text-align: center; margin: 6px 0 0 0; font-weight: 600;">
+                Verification incomplete: {{ cur_items|length - selected_order['packed_count'] }} item(s) remaining on packing checklist.
+              </p>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        <!-- STAGE 4: READY FOR PICKUP CONFIRMATION BANNER (Panel 4) -->
+        {% if cur_ord['status'] == 'Ready for Pickup' %}
+          <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 16px; margin-top: 16px;">
+            <div style="display: flex; items-center; gap: 8px; margin-bottom: 6px;">
+              <span style="font-size: 18px;">🎉</span>
+              <strong style="color: #065f46; font-size: 13px;">Package Packed &amp; Ready for Pickup</strong>
+            </div>
+            <p style="font-size: 12px; color: #047857; margin: 0 0 10px 0; line-height: 1.5;">
+              Confirmation sent to central operations. Waiting for Admin to assign a Hospete Fresh delivery rider. Please keep the sealed bag in the pickup zone.
+            </p>
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11px; font-weight: 700; color: #065f46; background: #fff; padding: 8px 12px; border-radius: 8px; border: 1px solid #bbf7d0;">
+              <span>Assigned Rider:</span>
+              <span>{{ cur_ord['assigned_delivery_boy'] or 'Pending Admin Assignment' }}</span>
+            </div>
+          </div>
+        {% endif %}
+
+        <!-- STAGES 5 & 6: PICKED UP OR DELIVERED -->
+        {% if cur_ord['status'] in ('Picked Up', 'Delivered') %}
+          <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 16px; margin-top: 16px;">
+            <div style="font-weight: 800; color: #0f172a; font-size: 13px;">
+              {% if cur_ord['status'] == 'Delivered' %}
+                ✓ Order Successfully Delivered to Customer
+              {% else %}
+                🛵 Picked Up by Delivery Rider
+              {% endif %}
+            </div>
+            <div style="font-size: 12px; color: #64748b; margin-top: 4px;">
+              Driver: <strong>{{ cur_ord['assigned_delivery_boy'] or 'Ravi (DLV-001)' }}</strong>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

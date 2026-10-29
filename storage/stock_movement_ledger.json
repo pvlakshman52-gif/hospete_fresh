@@ -1,0 +1,53 @@
+[
+  {
+    "vendorId": 2,
+    "vendorName": "Hospete Sweets & Namkeen",
+    "productId": 12,
+    "variantId": 1202,
+    "productName": "Crispy Masala Banana Chips",
+    "packSize": "300 g Family Pack",
+    "changeQty": -3,
+    "previousPhysicalStock": 25,
+    "newPhysicalStock": 22,
+    "previousReservedStock": 0,
+    "newReservedStock": 0,
+    "reason": "ORDER_FULFILLED",
+    "referenceId": "HF-29511",
+    "id": "led-1793193305555-n3wcp",
+    "timestamp": "2026-10-28T13:15:05.555Z"
+  },
+  {
+    "vendorId": 2,
+    "vendorName": "Hospete Sweets & Namkeen",
+    "productId": 5,
+    "variantId": 503,
+    "productName": "South Indian Special Mixture Snacks",
+    "packSize": "1 kg Jar",
+    "changeQty": -1,
+    "previousPhysicalStock": 20,
+    "newPhysicalStock": 19,
+    "previousReservedStock": 0,
+    "newReservedStock": 0,
+    "reason": "ORDER_FULFILLED",
+    "referenceId": "HF-29511",
+    "id": "led-1793193305555-2zi2m",
+    "timestamp": "2026-10-28T13:15:05.555Z"
+  },
+  {
+    "vendorId": 1,
+    "vendorName": "Tungabhadra Agro & Organics",
+    "productId": 1,
+    "variantId": 101,
+    "productName": "Farm Fresh Red Tomatoes",
+    "packSize": "1 kg",
+    "changeQty": -5,
+    "previousPhysicalStock": 35,
+    "newPhysicalStock": 30,
+    "previousReservedStock": 0,
+    "newReservedStock": 0,
+    "reason": "ORDER_FULFILLED",
+    "referenceId": "HF-22584",
+    "id": "led-1793188237922-n7q8z",
+    "timestamp": "2026-10-28T11:50:37.922Z"
+  }
+]

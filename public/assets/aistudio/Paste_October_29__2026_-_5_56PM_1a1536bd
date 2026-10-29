@@ -1,0 +1,732 @@
+# MASTER IMPLEMENTATION PROMPT
+## Hospete Fresh — Professional PostgreSQL Database Integration and Full Application Reliability
+
+### 1. Your Role
+
+Act as a senior full-stack architect, senior backend engineer, PostgreSQL database specialist, application security engineer, QA engineer, and migration specialist.
+
+You are working on my existing Hospete Fresh multi-vendor grocery marketplace.
+
+Your responsibility is to inspect the actual project, understand its existing functionality, and implement a professional, secure, maintainable, database-backed application using **Google Cloud SQL for PostgreSQL — Developer Edition**, available through the supported Google AI Studio integration.
+
+Do not build a replacement application. Do not provide only recommendations. Implement the changes directly in the existing codebase wherever the necessary project access and permissions are available.
+
+Work incrementally, verify each stage, and report any action that requires my approval.
+
+## 2. Absolute Requirements
+
+The following requirements are mandatory.
+
+**A. PostgreSQL is the single source of truth**
+
+All persistent business data must be stored in and retrieved from Cloud SQL for PostgreSQL through the secure backend.
+
+**B. No business data in browser storage**
+
+Never use localStorage, sessionStorage, IndexedDB, or browser-side mock repositories to persist real business data.
+
+This includes products, variants, vendors, inventory, prices, customers, carts, orders, reservations, payments, delivery records, settings, discounts, audit logs, and any other business records.
+
+**C. Preserve the existing UI**
+
+Do not redesign, replace, rearrange, remove, or restyle existing screens, components, dashboards, forms, menus, layouts, navigation, product cards, or modals.
+
+Preserve existing UI and workflows. Make only necessary data-layer, validation, security, and reliability changes. If a change to the UI is unavoidable, keep it minimal and explain why before making it.
+
+**D. Never fabricate success**
+
+Never display a successful save, order, payment, inventory update, or migration unless the authoritative backend confirms the operation.
+
+**E. No destructive shortcuts**
+
+Never reset the database, delete existing business records, overwrite real stock with seed data, or discard existing functionality without explicit authorization and a verified recovery plan.
+
+## 3. Phase One — Audit the Actual Project
+
+Before editing code, inspect the complete project.
+
+Examine:
+
+- Frontend framework, components, routing, and state management.
+- Backend framework, API endpoints, and middleware.
+- package.json and all relevant dependencies.
+- Existing database connections and data access layers.
+- Every localStorage and sessionStorage reference.
+- IndexedDB and any other browser persistence.
+- JSON files used as business databases.
+- Existing product, variant, category, brand, vendor, and inventory models.
+- Existing inventory reconciliation and multi-vendor allocation logic.
+- Shopping cart, checkout, registration, and order creation.
+- Vendor suborders, stock reservations, and stock movement ledger.
+- Customer, vendor, admin, and delivery partner roles.
+- Existing validation, error handling, and notification mechanisms.
+- Current tests, build scripts, environment variables, and deployment configuration.
+
+Produce an internal implementation checklist based on the actual code.
+
+Identify which existing functions are working, which require correction, and which are missing.
+
+Do not assume that the architecture matches a sample application. Follow the real project structure and reuse its existing conventions where appropriate.
+
+## 4. Phase Two — Set Up Cloud SQL for PostgreSQL
+
+Integrate the supported Cloud SQL for PostgreSQL service available through Google AI Studio.
+
+Requirements:
+
+1. Connect to the actual provisioned PostgreSQL instance.
+2. Use a secure backend database connection.
+3. Store database credentials in the supported secret or environment-variable configuration.
+4. Never expose database passwords, privileged connection strings, or service account credentials to the frontend.
+5. Use connection pooling or the platform-supported connection management strategy.
+6. Configure connection timeouts, query timeouts, and safe retry behaviour.
+7. Use parameterized queries or a properly configured ORM.
+8. Add a health-check endpoint that verifies application and database connectivity without revealing secrets.
+9. Distinguish database connection failures from validation failures and business-rule failures.
+10. Document the exact configuration required for local development and deployment.
+
+Do not invent project IDs, database credentials, or connection details.
+
+If a Firebase or Cloud SQL setup action requires my authorization, tell me exactly what I need to approve or configure.
+
+Do not silently create a second database or a duplicate cloud project.
+
+### Environment configuration
+
+Use the appropriate variables for the existing backend, for example:
+
+- DATABASE_URL or the supported Cloud SQL connection configuration.
+- DB_HOST, DB_PORT, DB_NAME, DB_USER, and DB_PASSWORD if required by the chosen connection method.
+- Application environment and migration configuration.
+
+Use the actual platform-supported connection mechanism. Do not expose secret variables to client-side bundles.
+
+Provide a safe example environment file containing placeholders only. Never include actual credentials in source control.
+
+## 5. Phase Three — Professional Database Architecture
+
+Design a normalized PostgreSQL schema based on the actual application.
+
+Reuse existing entity names and relationships where practical. Do not create duplicate tables merely to match the suggested list.
+
+Consider the following logical entities where required:
+
+- Users and user roles
+- Customers and customer addresses
+- Vendors and vendor service areas
+- Products
+- Product variants and SKUs
+- Categories and subcategories
+- Brands
+- Vendor inventory
+- Stock batches and expiry records, if supported by the existing business rules
+- Stock reservations
+- Parent orders
+- Vendor suborders
+- Order items
+- Order status history
+- Stock movement ledger
+- Deliveries and delivery assignments
+- Payments and payment references
+- Coupons and promotions
+- Application and business configuration
+- Validation exceptions and approval records
+- Audit logs
+
+Define:
+
+- Primary keys and foreign keys.
+- Unique constraints.
+- Required and optional fields.
+- Appropriate indexes.
+- Check constraints where useful.
+- Created, updated, and relevant lifecycle timestamps.
+- Consistent monetary precision.
+- Explicit status values and permitted transitions.
+- Referential integrity and deletion rules.
+
+Use stable identifiers and preserve existing IDs during migration whenever feasible.
+
+Store money using integer paise or a documented precision-safe decimal strategy. Never use floating-point arithmetic for financial calculations.
+
+Use UTC timestamps for persisted events and consistently convert to the appropriate local display timezone.
+
+Avoid unnecessary duplication of stock quantities, order totals, user roles, or other authoritative values.
+
+Where denormalized data is necessary for performance or historical order accuracy, define how it remains consistent.
+
+## 6. Phase Four — Database Migrations and Future Portability
+
+Do not create a schema that can only be modified manually in a production console.
+
+Implement a version-controlled database migration system compatible with the actual backend stack.
+
+Requirements:
+
+- Numbered or otherwise versioned migration files.
+- A database migration history table.
+- Repeatable, predictable migration execution.
+- Explicit handling of failed migrations.
+- Foreign-key and index migrations.
+- Safe forward migrations.
+- A documented rollback or forward-repair strategy.
+- Backward-compatible deployment changes when practical.
+- A separate seed process for development and testing.
+- No automatic destructive schema resets in normal startup.
+- No automatic reseeding of production inventory.
+- A documented schema and data backup procedure.
+
+A migration must not silently drop columns, delete records, reset stock, or overwrite production configuration.
+
+Before any destructive migration, require explicit authorization and a verified backup.
+
+If a migration partially fails, report the failed step and provide a safe recovery procedure. Do not blindly rerun non-idempotent operations.
+
+### Database portability
+
+Design a replaceable persistence layer.
+
+Keep business rules separate from PostgreSQL-specific queries and infrastructure.
+
+Use:
+
+- Domain models for business concepts.
+- Repository interfaces or equivalent data-access abstractions.
+- A service layer for business operations.
+- A PostgreSQL implementation behind the repository layer.
+- Database-neutral validation and business rules wherever practical.
+- Documented SQL-specific features and their alternatives.
+
+Do not create unnecessary abstractions that complicate the existing project.
+
+Use standard PostgreSQL features where appropriate. Clearly document any vendor-specific features or SQL that could complicate migration.
+
+Provide a future migration procedure covering schema conversion, data export, import, ID preservation, validation, cutover, and rollback.
+
+The application should be maintainable if I later decide to move from Cloud SQL to another PostgreSQL provider or a different database engine.
+
+Do not claim that changing database providers will be automatic. Database migration must be tested and validated.
+
+## 7. Phase Five — Remove Browser-Based Business Persistence
+
+Search the entire repository for:
+
+- localStorage
+- sessionStorage
+- IndexedDB
+- Browser database wrappers
+- Static product and vendor arrays
+- JSON-file persistence
+- Mock repositories
+- Hardcoded inventory quantities
+- Fallback business data
+- Functions that save or retrieve products, orders, inventory, customers, or other business records
+
+Replace business-data reads and writes with calls to the secure backend, which reads and writes PostgreSQL.
+
+Examples:
+
+- Product listing → backend API → PostgreSQL.
+- Vendor inventory update → authenticated backend API → PostgreSQL.
+- Customer registration → backend validation and account creation.
+- Checkout → transactional backend service → PostgreSQL.
+- Order history → authorized backend query → PostgreSQL.
+- Stock movements → transactional ledger insert → PostgreSQL.
+
+Do not merely synchronize browser data with PostgreSQL while keeping browser storage as the main data source.
+
+Do not silently fall back to localStorage, mock data, or JSON files when the database is unavailable.
+
+Permitted browser-side state is limited to transient component state and harmless UI preferences. Authentication must use the selected authentication system's secure supported mechanisms.
+
+A cart may remain temporarily in application memory, but if the existing application promises cross-device cart persistence, implement it in PostgreSQL.
+
+If the application supports guest carts, use a safe server-managed guest-cart identifier and appropriate expiry. Do not trust client-supplied prices, stock values, roles, or order totals.
+
+### Error behaviour
+
+When PostgreSQL is unavailable:
+
+- Display an appropriate user-facing error.
+- Do not report a successful write.
+- Do not invent products, stock, prices, or orders.
+- Do not use stale browser data as an authoritative fallback.
+- Allow a safe retry.
+- Prevent duplicate checkout submissions.
+- Log technical details securely on the server.
+
+Keep unsaved form input in transient component memory where appropriate without treating it as saved data.
+
+## 8. Phase Six — Secure Backend APIs
+
+Use the existing backend architecture wherever possible.
+
+Implement or correct authenticated API operations for the application's existing modules.
+
+Each endpoint must:
+
+- Authenticate the request.
+- Authorize the user's role and resource access.
+- Validate inputs on the server.
+- Enforce business rules on the server.
+- Use parameterized SQL or safe ORM operations.
+- Use transactions for related database changes.
+- Return consistent response structures.
+- Use suitable HTTP status codes.
+- Avoid leaking secrets, SQL statements, stack traces, or sensitive data.
+- Record important administrative and financial operations.
+
+Never rely solely on frontend validation or disabled buttons for security.
+
+Customers must not edit vendor inventory. Vendors must not access other vendors' private records. Delivery partners must only access authorized delivery tasks. Admin access must be enforced server-side.
+
+Do not trust role IDs or user IDs supplied by the browser without verifying the authenticated identity and permissions.
+
+## 9. Phase Seven — Complete Form Validation
+
+Review every existing form, including:
+
+- Customer registration.
+- Login.
+- Customer address management.
+- Product and variant management.
+- Vendor registration and vendor profile.
+- Inventory updates.
+- Checkout.
+- Delivery assignment and status updates.
+- Coupons and promotions.
+- Admin configuration.
+- Any additional form found in the actual project.
+
+Implement appropriate client-side validation for immediate feedback and mandatory server-side validation before database writes.
+
+For each field, explicitly define:
+
+- Whether it is required.
+- Data type and allowed format.
+- Minimum and maximum length or value.
+- Numeric ranges.
+- Allowed enumerated values.
+- Cross-field validation.
+- Uniqueness requirements.
+- Business-rule constraints.
+- Error message.
+- Whether an authorized admin override is permitted.
+
+Use the existing form-validation library if suitable. Otherwise, introduce a well-supported validation approach that fits the current framework.
+
+Do not invent mandatory requirements unrelated to the actual business process.
+
+### Example validation rules
+
+- Product name: required, trimmed, within a defined length, and subject to duplicate checks.
+- SKU: required when the existing product model requires it; unique according to the correct scope.
+- Price: valid non-negative amount, with any applicable business minimum enforced.
+- Stock quantity: valid non-negative quantity; inventory adjustments must be authorized.
+- Phone number: validate according to the supported country and existing business requirements.
+- Email: validate format when email is collected.
+- Address: require the fields necessary to determine serviceability and complete delivery.
+- Order quantity: positive and within available stock and applicable order limits.
+- Coupon: valid, active, within its validity window, and applicable to the order.
+- Dates: valid, correctly ordered, and consistent with the relevant business rules.
+
+Show field-level error messages and preserve the existing form design.
+
+Do not submit invalid data and then silently repair it on the backend.
+
+Revalidate all important fields and relationships on the server because client-side validation can be bypassed.
+
+## 10. Phase Eight — Controlled Admin Exceptions to Mandatory Fields
+
+Implement a secure, auditable mechanism for authorized administrators to approve specific exceptions when a required field is missing or cannot reasonably be supplied.
+
+Do not simply disable validation globally or allow all users to bypass required fields.
+
+First classify fields into:
+
+1. Mandatory and never bypassable.
+2. Mandatory but eligible for a controlled administrative exception.
+3. Optional by business design.
+
+### Never-bypassable examples
+
+- Authentication and authorization requirements.
+- Database integrity constraints.
+- Valid monetary calculations.
+- Valid stock quantities and transaction consistency.
+- Security-sensitive identifiers and permissions.
+- Fields required to identify the correct customer or vendor account.
+- Information legally or technically required for a particular operation.
+
+### Potentially overridable examples
+
+Only where the actual workflow permits it:
+
+- An unavailable secondary address line.
+- A missing optional business description.
+- A nonessential profile detail.
+- Another specifically approved business field that does not undermine safety, delivery, accounting, or compliance.
+
+The exact exception eligibility must be configurable through a controlled policy, not determined by arbitrary client input.
+
+### Admin approval workflow
+
+When a permitted field is missing:
+
+1. Validate the submission normally.
+2. Identify the missing field and why it is required.
+3. Determine whether the field is eligible for an override.
+4. If an exception is permitted, allow an authorized admin to approve that specific exception through the existing admin interface or a minimally invasive addition.
+5. Record the administrator's verified identity, timestamp, affected record, field, reason, approval status, and any expiry or scope restrictions.
+6. Revalidate all remaining fields.
+7. Save the record only when the server confirms that the submission is valid under the approved exception.
+8. Show a clear indication that the record has an approved exception.
+9. Keep a searchable audit trail and allow the exception to be revoked when appropriate.
+
+For workflows where the missing field prevents a safe operation, save the record as pending completion only if that workflow is explicitly supported. Do not confirm the order, dispatch delivery, or complete a financial transaction while critical required information remains missing.
+
+An admin override must never allow a user to impersonate another user, bypass database integrity, manipulate prices, exceed available stock, or bypass authentication.
+
+Do not implement unrestricted admin impersonation or a universal validation bypass.
+
+## 11. Phase Nine — Customer Registration During Checkout
+
+Implement a smooth registration flow without redesigning the existing customer experience.
+
+When a customer proceeds to checkout without being registered or authenticated:
+
+1. Preserve the current cart in safe application state.
+2. Ask the customer to register or sign in using the existing UI components and supported authentication flow.
+3. Collect only the information required by the actual registration and delivery workflow.
+4. Validate mandatory fields on the client and server.
+5. Create the authenticated customer account securely.
+6. Create or update the customer profile in PostgreSQL.
+7. Link the customer account to the correct customer record using stable identifiers.
+8. Restore the customer's cart from safe application state or server-side guest-cart data.
+9. Revalidate current prices, product availability, vendor serviceability, delivery fees, and stock.
+10. Display the final order summary and obtain the customer's confirmation.
+11. Create the order only after the final server-side checks succeed.
+12. Show the order confirmation only after the database transaction commits successfully.
+
+If the customer already has an account, allow sign-in and continue checkout.
+
+Do not create duplicate accounts when the same verified identity already exists.
+
+Do not store plaintext passwords in PostgreSQL.
+
+Use Firebase Authentication or another supported authentication provider if already configured, while storing the corresponding customer profile and business records in PostgreSQL. Do not introduce a second authentication system without a clear reason.
+
+If registration fails, preserve the cart safely and explain how to retry. Do not create a confirmed order for an unauthenticated or incorrectly linked customer.
+
+If the existing application explicitly supports guest checkout, preserve that policy unless a business decision is required to change it. The requested registration flow should apply whenever registration is required by the configured checkout policy.
+
+## 12. Phase Ten — Product and Vendor Management
+
+Connect every existing product and vendor management screen to PostgreSQL.
+
+Requirements:
+
+- Read current records from the database.
+- Save changes through authenticated APIs.
+- Validate product names, SKUs, categories, variants, prices, and status.
+- Prevent invalid duplicates.
+- Preserve historical order details when products are archived or deactivated.
+- Prevent deletion of categories, brands, or vendors that are still referenced unless a safe workflow exists.
+- Keep vendor ownership and access restrictions enforced.
+- Maintain stock quantities independently for each vendor and variant.
+- Do not reset inventory to initial seed values on application startup.
+- Use explicit development-only seed commands for test data.
+- Do not mix demo data with production records.
+
+When a save fails, show the correct error and do not make the screen falsely appear saved.
+
+## 13. Phase Eleven — Inventory and Multi-Vendor Allocation
+
+Preserve the existing multi-vendor allocation rules and repair any problems found during the audit.
+
+Requirements:
+
+- Maintain stock per vendor and product variant.
+- Calculate eligible combined stock accurately.
+- Consider vendor service area and customer locality.
+- Use configured pricing, delivery charges, route and pickup costs, and applicable business rules.
+- Prefer one vendor when it can fulfil the order optimally.
+- Split orders when the defined allocation rules justify doing so.
+- Do not hardcode vendor stock, prices, delivery rates, or allocation results.
+- Revalidate stock and prices at checkout.
+- Prevent overselling under concurrent requests.
+- Record parent orders and vendor suborders consistently.
+
+Use PostgreSQL transactions and appropriate row locking or conditional updates for inventory operations.
+
+For example, when reducing inventory, verify that sufficient stock remains and apply the decrement within the same transaction. If any part of checkout fails, roll back the relevant changes.
+
+Record reservations, releases, deductions, and reversals in an auditable stock movement ledger.
+
+Do not deduct stock twice. Do not release a reservation twice. Do not treat an expired reservation as available if the corresponding order has been confirmed.
+
+Use idempotency keys or equivalent safeguards for order creation and payment-related retries.
+
+If a stock update succeeds but a later order operation fails, use transaction rollback rather than leaving inconsistent data.
+
+## 14. Phase Twelve — Orders, Payments, and Delivery
+
+Ensure the order lifecycle is implemented consistently with the actual application.
+
+Support appropriate states such as:
+
+- Pending confirmation.
+- Confirmed.
+- Accepted or rejected by vendor.
+- Preparing.
+- Ready for pickup.
+- Out for delivery.
+- Delivered.
+- Cancelled.
+- Failed.
+
+Use only the states and transitions relevant to the current business rules.
+
+Prevent invalid transitions and unauthorized status changes.
+
+Keep parent orders and vendor suborders linked.
+
+Calculate the order total on the server using authoritative database prices and configured delivery charges.
+
+Do not trust totals submitted by the browser.
+
+For payments:
+
+- Never store card numbers, CVVs, passwords, or other prohibited payment credentials.
+- Verify payment status through the trusted payment provider or backend integration.
+- Do not mark an order paid based solely on a client request.
+- Use idempotency safeguards.
+- Reconcile payment and order states.
+- Handle failed, cancelled, duplicate, and delayed payment notifications safely.
+
+Do not claim payment functionality is implemented unless the necessary provider integration is actually configured and tested.
+
+## 15. Phase Thirteen — Reliability and Easy Troubleshooting
+
+Build a consistent error-handling system.
+
+Requirements:
+
+- Centralized backend error handling.
+- Structured application logs.
+- Correlation or request IDs.
+- Clear validation errors.
+- Distinct authentication, authorization, database, and business-rule errors.
+- Database connection and query timeouts.
+- Safe retries for transient failures only.
+- Idempotent retry behaviour for critical operations.
+- No sensitive data in logs.
+- No secrets or raw database errors in user-facing messages.
+- A database health-check endpoint.
+- Monitoring for repeated failures where supported.
+
+Create an admin-visible operational diagnostics section only if it can be added without disrupting the existing UI.
+
+Where appropriate, provide authorized tools to inspect failed jobs, stuck reservations, inconsistent order states, and failed migrations.
+
+Diagnostic tools must not permit arbitrary SQL execution from the browser or unprotected data modification.
+
+### Data integrity and repair
+
+Implement integrity checks for:
+
+- Negative or inconsistent stock.
+- Orders without their required order items.
+- Parent orders and vendor suborders that disagree.
+- Invalid reservation states.
+- Duplicate stock deductions.
+- Missing or conflicting ledger entries.
+- Invalid references to deleted or archived records.
+- Payment and order status mismatches.
+
+Where automated recovery is safe, make it idempotent and auditable.
+
+Where recovery could cause financial or stock discrepancies, report the issue and require an authorized decision rather than guessing.
+
+Provide a documented incident recovery procedure.
+
+## 16. Phase Fourteen — Security
+
+Implement production-appropriate security within the limits of the selected Developer Edition.
+
+Requirements:
+
+- Secure authentication.
+- Server-side role-based authorization.
+- Input validation and output encoding.
+- SQL injection prevention.
+- Appropriate CORS configuration.
+- Rate limiting for sensitive endpoints where supported.
+- Secure session and token handling.
+- Least-privilege database credentials.
+- Secret management.
+- Protection against unauthorized record access.
+- Safe file upload validation if uploads exist.
+- Audit logs for sensitive administrative changes.
+- Protection against unauthorized price, inventory, and order manipulation.
+
+Do not use a database superuser account for routine application requests if a restricted application account can be used.
+
+Keep schema migration privileges separate from normal runtime permissions where practical.
+
+Do not rely on hiding admin buttons as a security mechanism.
+
+## 17. Phase Fifteen — Performance and Maintainability
+
+Keep the existing UI responsive.
+
+Implement:
+
+- Appropriate database indexes.
+- Pagination for large lists.
+- Server-side filtering and sorting where appropriate.
+- Avoidance of unnecessary repeated queries.
+- Efficient connection management.
+- Consistent API response shapes.
+- Clear separation of frontend, business logic, and persistence.
+- Reusable validation and error-handling utilities.
+- Maintainable naming conventions and types.
+- Tests for important business rules.
+
+Do not prematurely introduce microservices, complicated event infrastructure, or unnecessary dependencies.
+
+Use a modular monolith or the existing architecture unless a specific requirement justifies something more complex.
+
+## 18. Phase Sixteen — Data Migration and Backup
+
+Before migrating existing data:
+
+1. Identify every existing data source.
+2. Record the number of products, variants, vendors, inventory records, customers, orders, and other relevant entities.
+3. Identify duplicate and conflicting records.
+4. Create a recoverable backup.
+5. Define explicit source-of-truth rules for conflicting records.
+6. Import data through a controlled, repeatable migration.
+7. Preserve identifiers and relationships where feasible.
+8. Verify record counts and important values.
+9. Verify stock totals, prices, order totals, and ledger relationships.
+10. Switch the application to PostgreSQL only after validation succeeds.
+
+Never automatically import stale demo data into the production database.
+
+Do not silently discard records that cannot be mapped. Produce a report of unresolved records and the action required.
+
+Document the limitations of Cloud SQL Developer Edition regarding backups, high availability, resource capacity, and recovery. Do not assume production-grade backup features are enabled.
+
+Provide a manual or automated backup-and-restore procedure appropriate to the actual environment.
+
+## 19. Phase Seventeen — Testing
+
+Run actual tests, not just code generation.
+
+### Database tests
+
+- Database connection.
+- Schema migrations.
+- Constraints and indexes.
+- Repository CRUD operations.
+- Transaction rollback.
+- Duplicate prevention.
+- Connection failure handling.
+
+### Application tests
+
+- Product creation and retrieval.
+- Product variant management.
+- Vendor inventory updates.
+- Customer registration and login.
+- Customer address validation.
+- Cart persistence according to the existing business policy.
+- Checkout and order creation.
+- Parent and vendor suborders.
+- Inventory reservation and deduction.
+- Cancellation and stock release.
+- Concurrent checkout attempts.
+- Vendor locality restrictions.
+- Admin approval of eligible exceptions.
+- Unauthorized access attempts.
+- Database failure during writes.
+- Duplicate submissions and retries.
+- Existing navigation and UI behaviour.
+
+### LocalStorage audit
+
+Search the entire project and classify every remaining localStorage and sessionStorage reference.
+
+Verify that no business-data read or write uses browser storage.
+
+Verify that the app never silently switches to mock data or JSON files when PostgreSQL is unavailable.
+
+### Build and regression checks
+
+Run the existing lint, type-check, test, and production build commands where available.
+
+Fix regressions caused by the implementation.
+
+Do not claim success for tests that were not executed.
+
+If a test cannot be run because of missing credentials, unavailable infrastructure, or tool limitations, clearly identify the blocker.
+
+## 20. Phase Eighteen — Final Acceptance Criteria
+
+The implementation is not complete until all applicable items below are verified.
+
+- Cloud SQL for PostgreSQL is connected through the secure backend.
+- Required database migrations are version-controlled.
+- Real business data is written to PostgreSQL.
+- Real business data is fetched from PostgreSQL.
+- Browser storage is not used as business-data persistence.
+- JSON files are not used as the active business database.
+- Existing business rules remain intact.
+- Existing UI, styling, navigation, and workflows are preserved.
+- Customer registration during checkout works according to the configured policy.
+- Mandatory fields are validated on the client and server.
+- Admin exceptions are limited, permission-controlled, and audited.
+- Inventory and checkout are protected against overselling.
+- Database failures never produce false success messages.
+- Migration and recovery procedures are documented.
+- Security controls are implemented and tested.
+- Existing functionality passes relevant regression tests.
+- Remaining limitations and deployment steps are documented.
+
+## 21. Required Final Report
+
+After implementation, provide a factual report with:
+
+1. The architecture discovered.
+2. The PostgreSQL connection and integration status.
+3. The database schema and migrations created.
+4. The existing data sources discovered.
+5. The migration performed and its verification results.
+6. Files created and modified.
+7. APIs implemented or changed.
+8. Validation rules and admin exceptions implemented.
+9. Customer registration and checkout behaviour.
+10. Inventory transaction and concurrency safeguards.
+11. Remaining localStorage, sessionStorage, and JSON references, with explanations.
+12. Security controls.
+13. Tests actually executed and their results.
+14. Build and deployment status.
+15. Any required manual action.
+16. Known issues, limitations, and recommended next steps.
+
+Do not claim the app is production-ready merely because the build passes.
+
+Distinguish clearly between implemented, tested, deployed, and still requiring configuration.
+
+## FINAL INSTRUCTION
+
+Start by inspecting the actual existing project.
+
+Then implement the PostgreSQL integration and required reliability improvements in small, verifiable stages.
+
+Do not redesign the application or replace existing working features.
+
+Do not fabricate data, bypass security, reset real stock, or silently fall back to browser storage.
+
+Use Cloud SQL for PostgreSQL as the authoritative business database, preserve the existing UI, implement secure and maintainable architecture, and make future database migration as straightforward as reasonably possible.

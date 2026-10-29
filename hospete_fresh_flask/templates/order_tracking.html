@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="tracking-screen-view" style="background: #f8fafc; min-height: 100vh; max-width: 460px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-bottom: 70px;">
+  <!-- 1. TOP HEADER (← Order #ORD12345  Help) -->
+  <header style="position: sticky; top: 0; z-index: 40; background: #ffffff; border-bottom: 1px solid #f1f5f9; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between;">
+    <a href="/orders" style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #1e293b; text-decoration: none; font-size: 18px; font-weight: 800; background: #f1f5f9;">
+      &larr;
+    </a>
+    <h1 style="font-size: 16px; font-weight: 900; color: #0f172a; margin: 0;">
+      Order #{{ order['order_number'] }}
+    </h1>
+    <a href="tel:9845012345" style="color: #16a34a; font-size: 13px; font-weight: 800; text-decoration: none; padding: 4px 8px; border-radius: 6px;">
+      Help
+    </a>
+  </header>
+
+  <!-- 2. STATUS BANNER (Light Green Box matching reference screenshot) -->
+  <div style="padding: 14px 16px 10px;">
+    <div style="background: #eefbf4; border: 1px solid #d1f4e0; border-radius: 20px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+      <h2 style="font-size: 17px; font-weight: 900; color: #0f172a; margin: 0 0 4px 0;">
+        {% if order['status'] == 'Delivered' %}
+          Your order has been delivered!
+        {% elif order['status'] == 'Out for Delivery' %}
+          Your order is on the way!
+        {% elif order['status'] == 'Packed' %}
+          Your order is packed at Hub!
+        {% else %}
+          Order confirmed by Hospete Fresh!
+        {% endif %}
+      </h2>
+      <p style="font-size: 13px; font-weight: 600; color: #334155; margin: 0 0 18px 0;">
+        {% if order['status'] == 'Delivered' %}
+          Delivered to your doorstep
+        {% else %}
+          Arriving in 15 minutes
+        {% endif %}
+      </p>
+
+      <!-- 4-Stage Progress Bar -->
+      <div style="position: relative; display: flex; justify-content: space-between; align-items: center; padding: 0 6px;">
+        <!-- Connecting Line -->
+        <div style="position: absolute; top: 12px; left: 18px; right: 18px; height: 3px; background: #e2e8f0; z-index: 1;"></div>
+        <div style="position: absolute; top: 12px; left: 18px; width: {% if order['status'] == 'Delivered' %}100%{% elif order['status'] == 'Out for Delivery' %}68%{% elif order['status'] == 'Packed' %}35%{% else %}0%{% endif %}; height: 3px; background: #16a34a; z-index: 2; transition: width 0.3s;"></div>
+
+        <!-- 1. Confirmed -->
+        <div style="display: flex; flex-direction: column; align-items: center; position: relative; z-index: 5;">
+          <div style="width: 26px; height: 26px; border-radius: 50%; background: #16a34a; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900;">
+            ✓
+          </div>
+          <span style="font-size: 10px; font-weight: 700; color: #16a34a; margin-top: 6px;">Confirmed</span>
+        </div>
+
+        <!-- 2. Packed -->
+        <div style="display: flex; flex-direction: column; align-items: center; position: relative; z-index: 5;">
+          <div style="width: 26px; height: 26px; border-radius: 50%; background: {% if order['status'] in ['Packed', 'Out for Delivery', 'Delivered'] %}#16a34a{% else %}#cbd5e1{% endif %}; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900;">
+            {% if order['status'] in ['Packed', 'Out for Delivery', 'Delivered'] %}✓{% else %}•{% endif %}
+          </div>
+          <span style="font-size: 10px; font-weight: 700; color: {% if order['status'] in ['Packed', 'Out for Delivery', 'Delivered'] %}#16a34a{% else %}#94a3b8{% endif %}; margin-top: 6px;">Packed</span>
+        </div>
+
+        <!-- 3. Out for Delivery -->
+        <div style="display: flex; flex-direction: column; align-items: center; position: relative; z-index: 5;">
+          <div style="width: 26px; height: 26px; border-radius: 50%; background: {% if order['status'] in ['Out for Delivery', 'Delivered'] %}#16a34a{% else %}#cbd5e1{% endif %}; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; box-shadow: {% if order['status'] == 'Out for Delivery' %}0 0 0 4px #bbf7d0{% else %}none{% endif %};">
+            {% if order['status'] == 'Delivered' %}✓{% else %}•{% endif %}
+          </div>
+          <span style="font-size: 10px; font-weight: 800; color: {% if order['status'] in ['Out for Delivery', 'Delivered'] %}#0f172a{% else %}#94a3b8{% endif %}; margin-top: 6px;">Out for Delivery</span>
+        </div>
+
+        <!-- 4. Delivered -->
+        <div style="display: flex; flex-direction: column; align-items: center; position: relative; z-index: 5;">
+          <div style="width: 26px; height: 26px; border-radius: 50%; background: {% if order['status'] == 'Delivered' %}#16a34a{% else %}#cbd5e1{% endif %}; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900;">
+            {% if order['status'] == 'Delivered' %}✓{% else %}•{% endif %}
+          </div>
+          <span style="font-size: 10px; font-weight: 700; color: {% if order['status'] == 'Delivered' %}#16a34a{% else %}#94a3b8{% endif %}; margin-top: 6px;">Delivered</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. LIVE ROUTE MAP CANVAS (Matching screenshot 2.5D route map) -->
+  <div style="padding: 6px 16px 14px;">
+    <div style="position: relative; width: 100%; height: 220px; background: #edf2f7; border-radius: 20px; overflow: hidden; border: 1px solid #e2e8f0;">
+      <svg viewBox="0 0 340 220" style="width: 100%; height: 100%;">
+        <rect width="340" height="220" fill="#edf2f7" />
+        <!-- Street Blocks -->
+        <path d="M10 20 L90 5 L110 50 L25 70 Z" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+        <path d="M125 15 L230 10 L210 65 L115 55 Z" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+        <path d="M245 15 L325 30 L310 80 L230 70 Z" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+        <path d="M30 85 L120 70 L105 140 L15 130 Z" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+        <path d="M135 75 L235 85 L215 155 L125 145 Z" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+        <path d="M250 95 L330 100 L320 170 L235 160 Z" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" />
+
+        <!-- Road Route -->
+        <path d="M 50 145 L 135 95 L 220 155 L 285 75" stroke="#cbd5e1" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M 50 145 L 135 95 L 220 155 L 285 75" stroke="#16a34a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+
+        <!-- Hub Point -->
+        <circle cx="50" cy="145" r="5" fill="#16a34a" />
+
+        <!-- Destination Pin with House -->
+        <g transform="translate(270, 42)">
+          <path d="M 15 4 C 8.37 4 3 9.37 3 16 C 3 24.5 15 37 15 37 C 15 37 27 24.5 27 16 C 27 9.37 21.63 4 15 4 Z" fill="#16a34a" />
+          <path d="M 15 9 L 8.5 14.5 L 10 14.5 L 10 21 L 13 21 L 13 17 L 17 17 L 17 21 L 20 21 L 20 14.5 L 21.5 14.5 Z" fill="#ffffff" />
+        </g>
+      </svg>
+
+      <!-- Simulated Rider Car -->
+      <div id="simulated-car" style="position: absolute; left: 45%; top: 46%; transform: translate(-50%, -50%); transition: all 1s ease-out;">
+        <span style="font-size: 28px; filter: drop-shadow(0 3px 4px rgba(0,0,0,0.25)); display: block;">🛵</span>
+      </div>
+
+      <!-- Distance Chip -->
+      <div style="position: absolute; bottom: 10px; left: 10px; background: rgba(255,255,255,0.95); padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 800; color: #0f172a; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 6px;">
+        <span style="width: 6px; height: 6px; border-radius: 50%; background: #16a34a;"></span>
+        <span>1.4 km away &bull; 15 mins</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. DELIVERY PARTNER CARD (Ramesh, 4.8, Call, WhatsApp) -->
+  <div style="padding: 0 16px 14px;">
+    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" alt="Rider" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid #16a34a;">
+        <div>
+          <h3 style="font-size: 14px; font-weight: 900; color: #0f172a; margin: 0 0 2px 0;">Ramesh</h3>
+          <p style="font-size: 11px; color: #64748b; margin: 0 0 3px 0;">Delivery Partner</p>
+          <div style="font-size: 11px; font-weight: 800; color: #334155;">
+            <span style="color: #f59e0b;">★</span> 4.8
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <a href="tel:9845012345" style="width: 40px; height: 40px; border-radius: 50%; background: #ecfdf5; border: 1px solid #a7f3d0; color: #16a34a; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 16px;">
+          📞
+        </a>
+        <a href="https://wa.me/919845012345?text=Hello%20Ramesh,%20checking%20my%20Hospete%20Fresh%20order" target="_blank" style="width: 40px; height: 40px; border-radius: 50%; background: #25D366; color: #ffffff; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 16px;">
+          💬
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. ITEMS IN THIS ORDER -->
+  <div style="padding: 0 16px;">
+    <h3 style="font-size: 14px; font-weight: 900; color: #0f172a; margin: 0 0 10px 0;">
+      Items in this order
+    </h3>
+
+    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); display: flex; flex-direction: column; gap: 10px;">
+      {% for itm in items %}
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; {% if not loop.last %}border-bottom: 1px solid #f8fafc; padding-bottom: 8px;{% endif %}">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 42px; height: 42px; border-radius: 10px; background: #f8fafc; border: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+            🛒
+          </div>
+          <div>
+            <h4 style="font-size: 12px; font-weight: 800; color: #0f172a; margin: 0 0 2px 0;">{{ itm['product_name'] }}</h4>
+            <p style="font-size: 11px; color: #64748b; margin: 0;">{{ itm['pack_size'] }} &times; {{ itm['quantity'] }}</p>
+          </div>
+        </div>
+        <span style="font-size: 12px; font-weight: 900; color: #0f172a;">₹{{ '%.0f'|format(itm['subtotal']) }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

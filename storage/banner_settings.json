@@ -1,0 +1,8 @@
+{
+  "autoRotateIntervalSeconds": 5,
+  "isAutoRotateEnabled": true,
+  "pauseOnHover": true,
+  "pauseOnInteraction": true,
+  "showIndicators": true,
+  "showArrows": true
+}

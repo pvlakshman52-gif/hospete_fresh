@@ -1,0 +1,9 @@
+{
+  "id": "campaign-today-flash",
+  "title": "Today's Flash Deals",
+  "subtitle": "Handpicked daily groceries at exclusive limited-time prices",
+  "isEnabled": true,
+  "endDateTime": "2026-10-25T11:41:17.827Z",
+  "enablePerDealCountdown": true,
+  "bannerNotice": "Limited stock available for today's flash deals. Maximum order limits apply per household."
+}

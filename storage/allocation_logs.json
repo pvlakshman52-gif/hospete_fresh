@@ -1,0 +1,116 @@
+[
+  {
+    "orderId": 1793193305547,
+    "orderNumber": "HF-29511",
+    "isMultiVendor": false,
+    "strategy": "SINGLE_OPTIMAL",
+    "reason": "Optimal single-vendor fulfillment: Hospete Sweets & Namkeen fulfills 100% of order with lowest fulfillment cost (₹460 product cost, located 2.2 km from dispatch).",
+    "evaluatedVendors": [
+      {
+        "vendorId": 1,
+        "vendorName": "Tungabhadra Agro & Organics",
+        "distanceKm": 2.2,
+        "canFulfillFullOrder": false,
+        "availableItemsCount": 0,
+        "estimatedCost": 0
+      },
+      {
+        "vendorId": 3,
+        "vendorName": "Sri Lakshmi Store",
+        "distanceKm": 2.2,
+        "canFulfillFullOrder": false,
+        "availableItemsCount": 0,
+        "estimatedCost": 0
+      },
+      {
+        "vendorId": 2,
+        "vendorName": "Hospete Sweets & Namkeen",
+        "distanceKm": 2.2,
+        "canFulfillFullOrder": true,
+        "availableItemsCount": 2,
+        "estimatedCost": 460
+      },
+      {
+        "vendorId": 5,
+        "vendorName": "Vijayanagar Mart & Provisions",
+        "distanceKm": 2.2,
+        "canFulfillFullOrder": false,
+        "availableItemsCount": 0,
+        "estimatedCost": 0,
+        "ineligibleReason": "Vendor \"Vijayanagar Mart & Provisions\" is currently suspended and cannot fulfill customer orders."
+      },
+      {
+        "vendorId": 4,
+        "vendorName": "Hampi Super Bazaar",
+        "distanceKm": 2.2,
+        "canFulfillFullOrder": false,
+        "availableItemsCount": 0,
+        "estimatedCost": 0,
+        "ineligibleReason": "Vendor \"Hampi Farm Delights\" is currently rejected and cannot fulfill customer orders."
+      }
+    ],
+    "allocatedVendors": [
+      {
+        "vendorId": 2,
+        "vendorName": "Hospete Sweets & Namkeen",
+        "itemCount": 2,
+        "subtotal": 460
+      }
+    ],
+    "splitCount": 1,
+    "totalDeliveryFee": 0,
+    "timestamp": "2026-10-28T13:15:05.554Z"
+  },
+  {
+    "orderId": 1793188237875,
+    "orderNumber": "HF-22584",
+    "isMultiVendor": false,
+    "strategy": "SINGLE_OPTIMAL",
+    "reason": "Optimal single-vendor fulfillment: Tungabhadra Agro & Organics fulfills 100% of order with lowest fulfillment cost (₹150 product cost, located 3.5 km from dispatch).",
+    "evaluatedVendors": [
+      {
+        "vendorId": 1,
+        "vendorName": "Tungabhadra Agro & Organics",
+        "distanceKm": 3.5,
+        "canFulfillFullOrder": true,
+        "availableItemsCount": 1,
+        "estimatedCost": 150
+      },
+      {
+        "vendorId": 3,
+        "vendorName": "Sri Lakshmi Store",
+        "distanceKm": 4.8,
+        "canFulfillFullOrder": true,
+        "availableItemsCount": 1,
+        "estimatedCost": 160
+      },
+      {
+        "vendorId": 4,
+        "vendorName": "Hampi Super Bazaar",
+        "distanceKm": 6.5,
+        "canFulfillFullOrder": true,
+        "availableItemsCount": 1,
+        "estimatedCost": 170
+      },
+      {
+        "vendorId": 2,
+        "vendorName": "Hospete Sweets & Namkeen",
+        "distanceKm": 1.2,
+        "canFulfillFullOrder": false,
+        "availableItemsCount": 0,
+        "estimatedCost": 0
+      }
+    ],
+    "allocatedVendors": [
+      {
+        "vendorId": 1,
+        "vendorName": "Tungabhadra Agro & Organics",
+        "itemCount": 1,
+        "subtotal": 150
+      }
+    ],
+    "splitCount": 1,
+    "totalDeliveryFee": 0,
+    "timestamp": "2026-10-28T11:50:37.922Z"
+  }
+]

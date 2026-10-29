@@ -1,0 +1,609 @@
+[
+  {
+    "id": 1793193305547,
+    "orderNumber": "HF-29511",
+    "customerName": "Deepak Sharma",
+    "phone": "9845099887",
+    "address": "#12, Patel Nagar 2nd Main, Hospete",
+    "locality": "Patel Nagar",
+    "totalAmount": 460,
+    "deliveryFee": 0,
+    "paymentMethod": "UPI / PhonePe",
+    "status": "New",
+    "createdAt": "Just now",
+    "orderedAt": "01:15 pm",
+    "estimatedDeliveryTime": "01:35 pm",
+    "estimatedMinutes": 20,
+    "totalTimeTaken": "~20 mins SLA",
+    "deliveryMinutes": 20,
+    "distanceKm": 2.2,
+    "isMultiVendor": false,
+    "vendorName": "Hospete Sweets & Namkeen",
+    "vendorLocality": "Station Road",
+    "items": [
+      {
+        "productId": 5,
+        "vendorId": 2,
+        "productName": "South Indian Special Mixture Snacks",
+        "packSize": "1 kg Jar",
+        "unitPrice": 220,
+        "quantity": 1,
+        "subtotal": 220,
+        "packed": false,
+        "checked": false,
+        "fulfillmentStatus": "Pending"
+      },
+      {
+        "productId": 12,
+        "vendorId": 2,
+        "productName": "Crispy Masala Banana Chips",
+        "packSize": "300 g Family Pack",
+        "unitPrice": 80,
+        "quantity": 3,
+        "subtotal": 240,
+        "packed": false,
+        "checked": false,
+        "fulfillmentStatus": "Pending"
+      }
+    ],
+    "suborders": [
+      {
+        "id": "so-1793193305547-2",
+        "suborderNumber": "SO-29511-V2",
+        "parentOrderId": 1793193305547,
+        "parentOrderNumber": "HF-29511",
+        "vendorId": 2,
+        "vendorName": "Hospete Sweets & Namkeen",
+        "vendorLocality": "Station Road",
+        "items": [
+          {
+            "productId": 5,
+            "vendorId": 2,
+            "productName": "South Indian Special Mixture Snacks",
+            "packSize": "1 kg Jar",
+            "unitPrice": 220,
+            "quantity": 1,
+            "subtotal": 220,
+            "packed": false,
+            "checked": false,
+            "fulfillmentStatus": "Pending"
+          },
+          {
+            "productId": 12,
+            "vendorId": 2,
+            "productName": "Crispy Masala Banana Chips",
+            "packSize": "300 g Family Pack",
+            "unitPrice": 80,
+            "quantity": 3,
+            "subtotal": 240,
+            "packed": false,
+            "checked": false,
+            "fulfillmentStatus": "Pending"
+          }
+        ],
+        "subtotal": 460,
+        "commissionRate": 10,
+        "commissionAmount": 46,
+        "netPayout": 414,
+        "status": "New",
+        "allocationReason": "Optimal single-vendor fulfillment: Hospete Sweets & Namkeen fulfills 100% of order with lowest fulfillment cost (₹460 product cost, located 2.2 km from dispatch).",
+        "createdAt": "01:15 pm"
+      }
+    ],
+    "allocationDecision": {
+      "orderId": 1793193305547,
+      "orderNumber": "HF-29511",
+      "isMultiVendor": false,
+      "strategy": "SINGLE_OPTIMAL",
+      "reason": "Optimal single-vendor fulfillment: Hospete Sweets & Namkeen fulfills 100% of order with lowest fulfillment cost (₹460 product cost, located 2.2 km from dispatch).",
+      "evaluatedVendors": [
+        {
+          "vendorId": 1,
+          "vendorName": "Tungabhadra Agro & Organics",
+          "distanceKm": 2.2,
+          "canFulfillFullOrder": false,
+          "availableItemsCount": 0,
+          "estimatedCost": 0
+        },
+        {
+          "vendorId": 3,
+          "vendorName": "Sri Lakshmi Store",
+          "distanceKm": 2.2,
+          "canFulfillFullOrder": false,
+          "availableItemsCount": 0,
+          "estimatedCost": 0
+        },
+        {
+          "vendorId": 2,
+          "vendorName": "Hospete Sweets & Namkeen",
+          "distanceKm": 2.2,
+          "canFulfillFullOrder": true,
+          "availableItemsCount": 2,
+          "estimatedCost": 460
+        },
+        {
+          "vendorId": 5,
+          "vendorName": "Vijayanagar Mart & Provisions",
+          "distanceKm": 2.2,
+          "canFulfillFullOrder": false,
+          "availableItemsCount": 0,
+          "estimatedCost": 0,
+          "ineligibleReason": "Vendor \"Vijayanagar Mart & Provisions\" is currently suspended and cannot fulfill customer orders."
+        },
+        {
+          "vendorId": 4,
+          "vendorName": "Hampi Super Bazaar",
+          "distanceKm": 2.2,
+          "canFulfillFullOrder": false,
+          "availableItemsCount": 0,
+          "estimatedCost": 0,
+          "ineligibleReason": "Vendor \"Hampi Farm Delights\" is currently rejected and cannot fulfill customer orders."
+        }
+      ],
+      "allocatedVendors": [
+        {
+          "vendorId": 2,
+          "vendorName": "Hospete Sweets & Namkeen",
+          "itemCount": 2,
+          "subtotal": 460
+        }
+      ],
+      "splitCount": 1,
+      "totalDeliveryFee": 0,
+      "timestamp": "2026-10-28T13:15:05.554Z"
+    }
+  },
+  {
+    "id": 1793188237875,
+    "orderNumber": "HF-22584",
+    "customerName": "Priya Anand",
+    "phone": "9845099887",
+    "address": "#15, 2nd Main, Patel Nagar",
+    "locality": "Patel Nagar",
+    "totalAmount": 150,
+    "deliveryFee": 0,
+    "paymentMethod": "UPI / GPay",
+    "status": "Accepted",
+    "createdAt": "Just now",
+    "orderedAt": "11:50 am",
+    "estimatedDeliveryTime": "12:10 pm",
+    "estimatedMinutes": 20,
+    "totalTimeTaken": "~20 mins SLA",
+    "deliveryMinutes": 20,
+    "distanceKm": 2.2,
+    "isMultiVendor": false,
+    "vendorName": "Tungabhadra Agro & Organics",
+    "vendorLocality": "College Road",
+    "items": [
+      {
+        "productId": 1,
+        "vendorId": 1,
+        "productName": "Farm Fresh Red Tomatoes",
+        "packSize": "1 kg",
+        "unitPrice": 30,
+        "quantity": 5,
+        "subtotal": 150,
+        "packed": false,
+        "checked": false,
+        "fulfillmentStatus": "Pending"
+      }
+    ],
+    "suborders": [
+      {
+        "id": "so-1793188237875-1",
+        "suborderNumber": "SO-22584-V1",
+        "parentOrderId": 1793188237875,
+        "parentOrderNumber": "HF-22584",
+        "vendorId": 1,
+        "vendorName": "Tungabhadra Agro & Organics",
+        "vendorLocality": "College Road",
+        "items": [
+          {
+            "productId": 1,
+            "vendorId": 1,
+            "productName": "Farm Fresh Red Tomatoes",
+            "packSize": "1 kg",
+            "unitPrice": 30,
+            "quantity": 5,
+            "subtotal": 150,
+            "packed": false,
+            "checked": false,
+            "fulfillmentStatus": "Pending"
+          }
+        ],
+        "subtotal": 150,
+        "commissionRate": 10,
+        "commissionAmount": 15,
+        "netPayout": 135,
+        "status": "Accepted",
+        "allocationReason": "Optimal single-vendor fulfillment: Tungabhadra Agro & Organics fulfills 100% of order with lowest fulfillment cost (₹150 product cost, located 3.5 km from dispatch).",
+        "createdAt": "11:50 am",
+        "orderAcceptedAt": "11:51 am"
+      }
+    ],
+    "allocationDecision": {
+      "orderId": 1793188237875,
+      "orderNumber": "HF-22584",
+      "isMultiVendor": false,
+      "strategy": "SINGLE_OPTIMAL",
+      "reason": "Optimal single-vendor fulfillment: Tungabhadra Agro & Organics fulfills 100% of order with lowest fulfillment cost (₹150 product cost, located 3.5 km from dispatch).",
+      "evaluatedVendors": [
+        {
+          "vendorId": 1,
+          "vendorName": "Tungabhadra Agro & Organics",
+          "distanceKm": 3.5,
+          "canFulfillFullOrder": true,
+          "availableItemsCount": 1,
+          "estimatedCost": 150
+        },
+        {
+          "vendorId": 3,
+          "vendorName": "Sri Lakshmi Store",
+          "distanceKm": 4.8,
+          "canFulfillFullOrder": true,
+          "availableItemsCount": 1,
+          "estimatedCost": 160
+        },
+        {
+          "vendorId": 4,
+          "vendorName": "Hampi Super Bazaar",
+          "distanceKm": 6.5,
+          "canFulfillFullOrder": true,
+          "availableItemsCount": 1,
+          "estimatedCost": 170
+        },
+        {
+          "vendorId": 2,
+          "vendorName": "Hospete Sweets & Namkeen",
+          "distanceKm": 1.2,
+          "canFulfillFullOrder": false,
+          "availableItemsCount": 0,
+          "estimatedCost": 0
+        }
+      ],
+      "allocatedVendors": [
+        {
+          "vendorId": 1,
+          "vendorName": "Tungabhadra Agro & Organics",
+          "itemCount": 1,
+          "subtotal": 150
+        }
+      ],
+      "splitCount": 1,
+      "totalDeliveryFee": 0,
+      "timestamp": "2026-10-28T11:50:37.922Z"
+    },
+    "orderAcceptedAt": "11:51 am"
+  },
+  {
+    "id": 83921,
+    "orderNumber": "HF-83921",
+    "customerName": "Ramesh Rao",
+    "phone": "9845012345",
+    "address": "#42, 3rd Cross, Gandhi Nagar",
+    "locality": "Patel Nagar",
+    "totalAmount": 76,
+    "deliveryFee": 0,
+    "paymentMethod": "UPI / PhonePe",
+    "status": "Assigned",
+    "createdAt": "12 Oct 2026, 10:15 AM",
+    "orderedAt": "10:15 AM",
+    "orderAcceptedAt": "10:17 AM",
+    "preparedAt": "10:20 AM",
+    "readyForPickupAt": "10:22 AM",
+    "assignedAt": "10:24 AM",
+    "estimatedDeliveryTime": "10:45 AM",
+    "estimatedMinutes": 20,
+    "totalTimeTaken": "~20 mins SLA",
+    "deliveryMinutes": 20,
+    "vendorName": "Sri Lakshmi Store",
+    "vendorLocality": "Kampli Road",
+    "vendorAddress": "Kampli Road, Hospet - 583201 Near Bus Stand, Opp. City Mart",
+    "vendorPhone": "+91 98451 00223",
+    "pickupInstructions": "Collect items from counter 2. Mention Hospete Fresh order reference.",
+    "deliveryOtp": "2846",
+    "deliveryInstructions": "Call before delivery. House is on left side, blue gate.",
+    "deliveryPayout": 45,
+    "distanceKm": 2.2,
+    "assignedDeliveryBoy": "Ravi Kumar (DLV-001)",
+    "assignedDeliveryBoyId": "DLV-001",
+    "assignedDeliveryBoyPhone": "+91 98450 12345",
+    "isMultiVendor": false,
+    "items": [
+      {
+        "productId": 1,
+        "vendorId": 3,
+        "productName": "Fresh Red Tomatoes",
+        "packSize": "1 kg",
+        "unitPrice": 32,
+        "quantity": 2,
+        "subtotal": 64,
+        "imageUrl": "/images/tomatoes.jpg",
+        "packed": true,
+        "checked": true
+      },
+      {
+        "productId": 2,
+        "vendorId": 3,
+        "productName": "Fresh Coriander",
+        "packSize": "1 Bunch (100 g)",
+        "unitPrice": 12,
+        "quantity": 1,
+        "subtotal": 12,
+        "imageUrl": "/images/cat_veggies.jpg",
+        "packed": true,
+        "checked": true
+      }
+    ],
+    "suborders": [
+      {
+        "id": "SO-83921-V3",
+        "suborderNumber": "SO-83921-V3",
+        "parentOrderId": 83921,
+        "parentOrderNumber": "HF-83921",
+        "vendorId": 3,
+        "vendorName": "Sri Lakshmi Store",
+        "vendorLocality": "Kampli Road",
+        "vendorAddress": "Kampli Road, Hospet - 583201",
+        "vendorPhone": "+91 98451 00223",
+        "subtotal": 76,
+        "commissionRate": 10,
+        "commissionAmount": 7.6,
+        "netPayout": 68.4,
+        "status": "Assigned",
+        "createdAt": "12 Oct 2026, 10:15 AM",
+        "orderAcceptedAt": "10:17 AM",
+        "preparedAt": "10:20 AM",
+        "readyForPickupAt": "10:22 AM",
+        "allocationReason": "Optimal single-vendor fulfillment: Sri Lakshmi Store fulfills 100% of order with lowest fulfillment overhead.",
+        "items": [
+          {
+            "productId": 1,
+            "vendorId": 3,
+            "productName": "Fresh Red Tomatoes",
+            "packSize": "1 kg",
+            "unitPrice": 32,
+            "quantity": 2,
+            "subtotal": 64,
+            "imageUrl": "/images/tomatoes.jpg",
+            "packed": true,
+            "checked": true
+          },
+          {
+            "productId": 2,
+            "vendorId": 3,
+            "productName": "Fresh Coriander",
+            "packSize": "1 Bunch (100 g)",
+            "unitPrice": 12,
+            "quantity": 1,
+            "subtotal": 12,
+            "imageUrl": "/images/cat_veggies.jpg",
+            "packed": true,
+            "checked": true
+          }
+        ]
+      }
+    ],
+    "allocationDecision": {
+      "orderId": 83921,
+      "orderNumber": "HF-83921",
+      "isMultiVendor": false,
+      "strategy": "SINGLE_OPTIMAL",
+      "reason": "Optimal single-vendor fulfillment: Sri Lakshmi Store had complete stock available and lowest transit distance to Patel Nagar.",
+      "evaluatedVendors": [
+        {
+          "vendorId": 3,
+          "vendorName": "Sri Lakshmi Store",
+          "distanceKm": 4.8,
+          "canFulfillFullOrder": true,
+          "availableItemsCount": 2,
+          "estimatedCost": 76
+        },
+        {
+          "vendorId": 1,
+          "vendorName": "Tungabhadra Agro & Organics",
+          "distanceKm": 3.5,
+          "canFulfillFullOrder": true,
+          "availableItemsCount": 2,
+          "estimatedCost": 78
+        }
+      ],
+      "allocatedVendors": [
+        {
+          "vendorId": 3,
+          "vendorName": "Sri Lakshmi Store",
+          "itemCount": 2,
+          "subtotal": 76
+        }
+      ],
+      "splitCount": 1,
+      "totalDeliveryFee": 0,
+      "timestamp": "2026-10-12T10:15:00.000Z"
+    }
+  },
+  {
+    "id": 83920,
+    "orderNumber": "HF-83920",
+    "customerName": "Smt. Shanti Devi",
+    "phone": "9845198765",
+    "address": "#18, Station Road near KSRTC",
+    "locality": "Station Road",
+    "totalAmount": 315,
+    "deliveryFee": 0,
+    "paymentMethod": "Cash on Delivery",
+    "status": "Accepted",
+    "createdAt": "12 Oct 2026, 09:45 AM",
+    "orderedAt": "09:45 AM",
+    "orderAcceptedAt": "09:47 AM",
+    "estimatedDeliveryTime": "10:05 AM",
+    "estimatedMinutes": 20,
+    "totalTimeTaken": "~20 mins SLA",
+    "deliveryMinutes": 20,
+    "vendorName": "Bellary Organic Dairy",
+    "vendorLocality": "Dam Road",
+    "vendorAddress": "#12, Dam Road, Hospete",
+    "vendorPhone": "+91 98452 44556",
+    "deliveryOtp": "8912",
+    "deliveryPayout": 40,
+    "distanceKm": 1.2,
+    "isMultiVendor": false,
+    "items": [
+      {
+        "productId": 4,
+        "vendorId": 3,
+        "productName": "Nandini Pure Cow Ghee",
+        "packSize": "500 ml Pouch",
+        "unitPrice": 315,
+        "quantity": 1,
+        "subtotal": 315,
+        "imageUrl": "/images/cat_dairy.jpg"
+      }
+    ],
+    "suborders": [
+      {
+        "id": "SO-83920-V3",
+        "suborderNumber": "SO-83920-V3",
+        "parentOrderId": 83920,
+        "parentOrderNumber": "HF-83920",
+        "vendorId": 3,
+        "vendorName": "Bellary Organic Dairy",
+        "vendorLocality": "Dam Road",
+        "vendorAddress": "#12, Dam Road, Hospete",
+        "vendorPhone": "+91 98452 44556",
+        "subtotal": 315,
+        "commissionRate": 10,
+        "commissionAmount": 31.5,
+        "netPayout": 283.5,
+        "status": "Accepted",
+        "createdAt": "12 Oct 2026, 09:45 AM",
+        "orderAcceptedAt": "09:47 AM",
+        "allocationReason": "Optimal single-vendor fulfillment: Stock ready for instant dispatch.",
+        "items": [
+          {
+            "productId": 4,
+            "vendorId": 3,
+            "productName": "Nandini Pure Cow Ghee",
+            "packSize": "500 ml Pouch",
+            "unitPrice": 315,
+            "quantity": 1,
+            "subtotal": 315,
+            "imageUrl": "/images/cat_dairy.jpg"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 83919,
+    "orderNumber": "HF-83919",
+    "customerName": "Kiran Kumar",
+    "phone": "9900112233",
+    "address": "#89, Main Bazaar, Dam Road",
+    "locality": "Station Road",
+    "totalAmount": 98,
+    "deliveryFee": 25,
+    "paymentMethod": "UPI / GPay",
+    "status": "Preparing",
+    "createdAt": "12 Oct 2026, 09:10 AM",
+    "orderedAt": "09:10 AM",
+    "orderAcceptedAt": "09:12 AM",
+    "preparedAt": "09:15 AM",
+    "estimatedDeliveryTime": "09:30 AM",
+    "estimatedMinutes": 15,
+    "totalTimeTaken": "~15 mins SLA",
+    "deliveryMinutes": 15,
+    "vendorName": "Tungabhadra Agro & Organics",
+    "vendorLocality": "Station Road",
+    "vendorAddress": "#14, Station Road, Near Railway Underpass, Hospet",
+    "vendorPhone": "+91 98452 33445",
+    "deliveryOtp": "3391",
+    "deliveryPayout": 42,
+    "distanceKm": 1.2,
+    "isMultiVendor": false,
+    "items": [
+      {
+        "productId": 1,
+        "vendorId": 1,
+        "productName": "Farm Fresh Red Tomatoes",
+        "packSize": "1 kg",
+        "unitPrice": 32,
+        "quantity": 1,
+        "subtotal": 32,
+        "imageUrl": "/images/tomatoes.jpg"
+      },
+      {
+        "productId": 20,
+        "vendorId": 1,
+        "productName": "Fresh Palak (Spinach)",
+        "packSize": "250 g Bunch",
+        "unitPrice": 18,
+        "quantity": 1,
+        "subtotal": 18,
+        "imageUrl": "/images/cat_veggies.jpg"
+      },
+      {
+        "productId": 19,
+        "vendorId": 1,
+        "productName": "Sambar Onions",
+        "packSize": "1 kg",
+        "unitPrice": 48,
+        "quantity": 1,
+        "subtotal": 48,
+        "imageUrl": "/images/cat_veggies.jpg"
+      }
+    ],
+    "suborders": [
+      {
+        "id": "SO-83919-V1",
+        "suborderNumber": "SO-83919-V1",
+        "parentOrderId": 83919,
+        "parentOrderNumber": "HF-83919",
+        "vendorId": 1,
+        "vendorName": "Tungabhadra Agro & Organics",
+        "vendorLocality": "Station Road",
+        "vendorAddress": "#14, Station Road, Near Railway Underpass, Hospet",
+        "vendorPhone": "+91 98452 33445",
+        "subtotal": 98,
+        "commissionRate": 10,
+        "commissionAmount": 9.8,
+        "netPayout": 88.2,
+        "status": "Preparing",
+        "createdAt": "12 Oct 2026, 09:10 AM",
+        "orderAcceptedAt": "09:12 AM",
+        "preparedAt": "09:15 AM",
+        "items": [
+          {
+            "productId": 1,
+            "vendorId": 1,
+            "productName": "Farm Fresh Red Tomatoes",
+            "packSize": "1 kg",
+            "unitPrice": 32,
+            "quantity": 1,
+            "subtotal": 32,
+            "imageUrl": "/images/tomatoes.jpg"
+          },
+          {
+            "productId": 20,
+            "vendorId": 1,
+            "productName": "Fresh Palak (Spinach)",
+            "packSize": "250 g Bunch",
+            "unitPrice": 18,
+            "quantity": 1,
+            "subtotal": 18,
+            "imageUrl": "/images/cat_veggies.jpg"
+          },
+          {
+            "productId": 19,
+            "vendorId": 1,
+            "productName": "Sambar Onions",
+            "packSize": "1 kg",
+            "unitPrice": 48,
+            "quantity": 1,
+            "subtotal": 48,
+            "imageUrl": "/images/cat_veggies.jpg"
+          }
+        ]
+      }
+    ]
+  }
+]
